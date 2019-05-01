@@ -3,10 +3,11 @@ import numpy as np
 from reward import determineReward, determineEnfOfGameReward
 from Xsa import getXsa, getAction
 
-W_SIZE = 645
+W_SIZE = 2925
 
-W_weights_matrix = np.memmap("W_weights_matrix", dtype='float32', mode='r+', shape=(W_SIZE))
-w = np.copy(W_weights_matrix)
+w = np.zeros(W_SIZE)
+
+np.set_printoptions(threshold=np.inf)
 
 print("Loading W_weights_matrix", w.max(), w.min())
 
@@ -32,15 +33,14 @@ class Agent:
             self.endOfGame(data["value"])
 
     def endOfGame(self, value):
-        global w, W_weights_matrix
+        global w
 
         reward = determineEnfOfGameReward(value)
         self.z = traceDecay * gamma * self.z + self.oldXsa
         delta = reward - np.dot(w, self.oldXsa)
         w = w + alpha * delta * self.z
 
-        print("End of game after", self.t, "episodes. Array distance:", np.linalg.norm(w - W_weights_matrix))
-        W_weights_matrix[:] = w[:]
+        print(w)
 
         self.sio.emit("action-" + str(self.id), {"type": None}) # Needs to play one last time for the game to properly end
 
