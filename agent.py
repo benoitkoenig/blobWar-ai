@@ -1,5 +1,6 @@
 import numpy as np
 
+from reward import determineReward, determineEnfOfGameReward
 from Xsa import getXsa, getAction
 
 W_SIZE = 645
@@ -13,18 +14,6 @@ alpha = 1. / W_SIZE
 epsilon = 0.1
 gamma = 0.9
 traceDecay = 0.9
-
-def determineReward(state, newState):
-    newAliveAllies = sum(s["alive"] for s in newState["army"])
-    newAliveEnemies = sum(s["alive"] for s in newState["enemy"])
-    oldAliveAllies = sum(s["alive"] for s in state["army"])
-    oldAliveEnemies = sum(s["alive"] for s in state["enemy"])
-    if (oldAliveAllies - newAliveAllies == 1 & oldAliveEnemies - newAliveEnemies == 1):
-        return 50
-    elif (oldAliveEnemies - newAliveEnemies == 1):
-        return 100
-    else:
-        return -1
 
 class Agent:
     def __init__(self, sio, id):
@@ -44,16 +33,12 @@ class Agent:
 
     def endOfGame(self, value):
         global w, W_weights_matrix
-        if (value == "Victory !"):
-            reward = 500
-        elif (value == "Defeat"):
-            reward = 0
-        else:
-            reward = 100
 
+        reward = determineEnfOfGameReward(value)
         self.z = traceDecay * gamma * self.z + self.oldXsa
         delta = reward - np.dot(w, self.oldXsa)
         w = w + alpha * delta * self.z
+
         print("[Python] End of game after " + `self.t` + " episodes. Array distance: " + `np.linalg.norm(w - W_weights_matrix)`)
         W_weights_matrix[:] = w[:]
 
