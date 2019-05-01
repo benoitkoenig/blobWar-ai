@@ -3,12 +3,11 @@ def determineReward(state, newState):
     newAliveEnemies = sum(s["alive"] for s in newState["enemy"])
     oldAliveAllies = sum(s["alive"] for s in state["army"])
     oldAliveEnemies = sum(s["alive"] for s in state["enemy"])
-    if (oldAliveAllies - newAliveAllies == 1 & oldAliveEnemies - newAliveEnemies == 1):
-        return 50
-    elif (oldAliveEnemies - newAliveEnemies == 1):
-        return 100
-    else:
-        return -1
+
+    alliesKilled = oldAliveAllies - newAliveAllies
+    enemiesKilled = oldAliveEnemies - newAliveEnemies
+
+    return enemiesKilled * 50 - alliesKilled * 40 - 1
 
 def determineEnfOfGameReward(value):
     if (value == "Victory !"):
