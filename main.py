@@ -26,15 +26,11 @@ def on_terminate_agent(data):
 
 @sio.on('disconnect')
 def on_disconnect():
-    print("Socket disconnected. Attempting to reconnect")
-    connect()
+    print("Socket disconnected")
 
 address = "http://localhost:8080"
-print(os.environ)
 if "ENV" in os.environ:
-    print("Variable ENV is present")
     if os.environ["ENV"] == "heroku":
-        print("variable ENV is heroku")
         address = "http://blobwar.herokuapp.com/"
 
 print("Address is: " + address)
