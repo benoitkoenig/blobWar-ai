@@ -31,7 +31,7 @@ def on_disconnect():
 
 address = "http://localhost:8080"
 print(os.environ)
-if "hasattr" in os.environ:
+if "ENV" in os.environ:
     print("Variable ENV is present")
     if os.environ["ENV"] == "heroku":
         print("variable ENV is heroku")
