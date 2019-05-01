@@ -8,7 +8,7 @@ W_SIZE = 645
 W_weights_matrix = np.memmap("W_weights_matrix", dtype='float32', mode='r+', shape=(W_SIZE))
 w = np.copy(W_weights_matrix)
 
-print("[Python] Loading W_weights_matrix " + `w.max()` + " " + `w.min()`)
+print("Loading W_weights_matrix", w.max(), w.min())
 
 alpha = 1. / W_SIZE
 epsilon = 0.1
@@ -39,10 +39,10 @@ class Agent:
         delta = reward - np.dot(w, self.oldXsa)
         w = w + alpha * delta * self.z
 
-        print("[Python] End of game after " + `self.t` + " episodes. Array distance: " + `np.linalg.norm(w - W_weights_matrix)`)
+        print("End of game after", self.t, "episodes. Array distance:", np.linalg.norm(w - W_weights_matrix))
         W_weights_matrix[:] = w[:]
 
-        self.sio.emit("action-" + `self.id`, {"type": None}) # Needs to play one last time for the game to properly end
+        self.sio.emit("action-" + str(self.id), {"type": None}) # Needs to play one last time for the game to properly end
 
     def update(self, state):
         global w
@@ -51,7 +51,7 @@ class Agent:
             return
         self.t += 1
         if (self.t % 15 != 0):
-            self.sio.emit("action-" + `self.id`, {"type": None})
+            self.sio.emit("action-" + str(self.id), {"type": None})
             return # give time for our action to have a consequence
 
         Xsa = getXsa(state) #Xsa is a list for each Xs for a given a
@@ -69,4 +69,4 @@ class Agent:
         self.oldState = state
         self.oldXsa = Xsa[bestActionId].tolist()
         bestAction = getAction(state, bestActionId)
-        self.sio.emit("action-" + `self.id`, bestAction)
+        self.sio.emit("action-" + str(self.id), bestAction)
