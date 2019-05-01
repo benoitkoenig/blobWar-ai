@@ -34,6 +34,8 @@ if hasattr(os.environ, "ENV"):
     if os.environ["ENV"] == "heroku":
         address = "http://blobwar.herokuapp.com/"
 
+print("Address is: " + address)
+
 def connect():
     try:
         sio.connect(address)
