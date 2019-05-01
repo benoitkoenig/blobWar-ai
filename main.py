@@ -1,5 +1,6 @@
-import socketio
 import os
+import socketio
+import time
 
 from agent import Agent
 
@@ -8,7 +9,7 @@ agents = {}
 
 @sio.on('connect')
 def on_connect():
-    print('[Python] SocketIO connected: AI is up. Identifying as the AI')
+    print('SocketIO connected: AI is up. Identifying as the AI')
     sio.emit('connectAI', {'passwd': 'Kore wa watashi no passwd'})
 
 @sio.on('create_learning_agent')
@@ -25,11 +26,20 @@ def on_terminate_agent(data):
 
 @sio.on('disconnect')
 def on_disconnect():
-    print('[Python] SocketIO disconnected: closing AI')
+    print("Socket disconnected. Attempting to reconnect")
+    connect()
 
 address = "http://localhost:8080"
 if hasattr(os.environ, "ENV"):
     if os.environ["ENV"] == "heroku":
         address = "http://blobwar.herokuapp.com/"
 
-sio.connect(address)
+def connect():
+    try:
+        sio.connect(address)
+    except:
+        print("Socket connection failed. Retrying in 6 seconds")
+        time.sleep(6)
+        connect()
+
+connect()
