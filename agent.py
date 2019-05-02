@@ -1,17 +1,18 @@
 import numpy as np
 
 from reward import determineReward, determineEnfOfGameReward
+from W import w
 from Xsa import getXsa, getAction
 
 W_SIZE = 2925
 
-w = np.zeros(W_SIZE)
+# w = np.zeros(W_SIZE)
 
 np.set_printoptions(threshold=np.inf)
 
 print("Loading W_weights_matrix", w.max(), w.min())
 
-alpha = 1. / W_SIZE
+alpha = 5. / W_SIZE
 epsilon = 0.1
 gamma = 0.9
 traceDecay = 0.9
