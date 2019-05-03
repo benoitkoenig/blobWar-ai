@@ -49,7 +49,7 @@ class Agent:
         Ws[self.name] = Ws[self.name] + alpha * delta * self.z
 
         print(self.name)
-        print(Ws[self.name])
+        print(Ws[self.name].tolist())
 
         self.sio.emit("action-" + str(self.id), {"type": None}) # Needs to play one last time for the game to properly end
 
