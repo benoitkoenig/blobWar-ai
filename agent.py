@@ -1,16 +1,22 @@
 import numpy as np
 
 from reward import determineReward, determineEnfOfGameReward
-from W import w
 from Xsa import getXsa, getAction
 
-W_SIZE = 2925
+W_SIZE = 5265
 
 # w = np.zeros(W_SIZE)
 
+Ws = {
+    "BotGhostBloc": np.zeros(W_SIZE),
+    "BotDashDash": np.zeros(W_SIZE),
+}
+
 np.set_printoptions(threshold=np.inf)
 
-print("Loading W_weights_matrix", w.max(), w.min())
+print("Loading Ws")
+for key in Ws:
+    print(key, Ws[key].min(), Ws[key].max())
 
 alpha = 5. / W_SIZE
 epsilon = 0.1
@@ -18,10 +24,11 @@ gamma = 0.9
 traceDecay = 0.9
 
 class Agent:
-    def __init__(self, sio, id):
+    def __init__(self, sio, id, name):
         sio.emit("learning_agent_created", {"id": id})
         self.sio = sio
         self.id = id
+        self.name = name
         self.oldXsa = np.zeros(W_SIZE)
         self.oldState = None
         self.t = 0
@@ -34,19 +41,20 @@ class Agent:
             self.endOfGame(data["value"])
 
     def endOfGame(self, value):
-        global w
+        global Ws
 
         reward = determineEnfOfGameReward(value)
         self.z = traceDecay * gamma * self.z + self.oldXsa
-        delta = reward - np.dot(w, self.oldXsa)
-        w = w + alpha * delta * self.z
+        delta = reward - np.dot(Ws[self.name], self.oldXsa)
+        Ws[self.name] = Ws[self.name] + alpha * delta * self.z
 
-        print(w)
+        print(self.name)
+        print(Ws[self.name])
 
         self.sio.emit("action-" + str(self.id), {"type": None}) # Needs to play one last time for the game to properly end
 
     def update(self, state):
-        global w
+        global Ws
         if (self.oldState == None): # First update, initializing the state
             self.oldState = state
             return
@@ -56,7 +64,7 @@ class Agent:
             return # give time for our action to have a consequence
 
         Xsa = getXsa(state) #Xsa is a list for each Xs for a given a
-        Q = np.array([np.dot(w, X) for X in Xsa])
+        Q = np.array([np.dot(Ws[self.name], X) for X in Xsa])
         if (np.random.uniform() < epsilon):
             bestActionId = np.random.choice(range(len(Q)))
         else:
@@ -64,8 +72,8 @@ class Agent:
 
         reward = determineReward(self.oldState, state)
         self.z = traceDecay * gamma * self.z + self.oldXsa
-        delta = reward + gamma * Q[bestActionId] - np.dot(w, self.oldXsa)
-        w = w + alpha * delta * self.z
+        delta = reward + gamma * Q[bestActionId] - np.dot(Ws[self.name], self.oldXsa)
+        Ws[self.name] = Ws[self.name] + alpha * delta * self.z
 
         self.oldState = state
         self.oldXsa = Xsa[bestActionId].tolist()

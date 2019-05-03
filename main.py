@@ -14,7 +14,7 @@ def on_connect():
 
 @sio.on('create_learning_agent')
 def on_create_learning_agent(data):
-    agents[data["id"]] = Agent(sio, data["id"])
+    agents[data["id"]] = Agent(sio, data["id"], data["name"])
 
 @sio.on('action')
 def on_action(data):

@@ -6,8 +6,8 @@ def getAction(state, actionId):
     for blobId in range(len(state["army"])):
         for otherBlob in state["enemy"]:
             actions.append({"type": "server/setDestination", "idBlob": blobId, "destination": {"x": otherBlob["x"], "y": otherBlob["y"]}})
-        actions.append({"type": "server/triggerCard", "idBlob": blobId, "destination": {"x": 0, "y": 0}, "idCard": 0})
-        actions.append({"type": "server/triggerCard", "idBlob": blobId, "destination": {"x": 0, "y": 0}, "idCard": 1})
+            actions.append({"type": "server/triggerCard", "idBlob": blobId, "destination": {"x": otherBlob["x"], "y": otherBlob["y"]}, "idCard": 0})
+            actions.append({"type": "server/triggerCard", "idBlob": blobId, "destination": {"x": otherBlob["x"], "y": otherBlob["y"]}, "idCard": 1})
     return actions[actionId]
 
 def getFeatures(state):
@@ -37,9 +37,9 @@ def getXsa(state):
     features = getFeatures(state)
     Xsa = []
     zeros = np.zeros(len(features))
-    for actionId in range(15):
+    for actionId in range(27):
         X = np.empty(0)
-        for i in range(15):
+        for i in range(27):
             if (i == actionId):
                 X = np.concatenate([X, features])
             else:
