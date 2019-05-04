@@ -3,16 +3,16 @@ import numpy as np
 from reward import determineReward, determineEnfOfGameReward
 from Xsa import getXsa, getAction
 
-W_SIZE = 5265
+W_SIZE = 5373
 
 Ws_saved = {
-    "BotGhostBloc": np.memmap("W_ghost_bloc", dtype='float32', mode='r+', shape=(W_SIZE)),
-    "BotDashDash": np.memmap("W_dash_dash", dtype='float32', mode='r+', shape=(W_SIZE)),
+    # "BotGhostBloc": np.memmap("W_ghost_bloc", dtype='float32', mode='r+', shape=(W_SIZE)),
+    # "BotDashDash": np.memmap("W_dash_dash", dtype='float32', mode='r+', shape=(W_SIZE)),
 }
 
 Ws = {
-    "BotGhostBloc": np.copy(Ws_saved["BotGhostBloc"]),
-    "BotDashDash": np.copy(Ws_saved["BotDashDash"]),
+    # "BotGhostBloc": np.copy(Ws_saved["BotGhostBloc"]),
+    # "BotDashDash": np.copy(Ws_saved["BotDashDash"]),
 }
 
 np.set_printoptions(threshold=np.inf)
@@ -21,7 +21,7 @@ print("Loading Ws")
 for key in Ws:
     print(key, Ws[key].min(), Ws[key].max())
 
-alpha = 5. / W_SIZE
+alpha = 1. / W_SIZE
 epsilon = 0.1
 gamma = 0.9
 traceDecay = 0.9
@@ -35,6 +35,7 @@ class Agent:
         self.oldXsa = np.zeros(W_SIZE)
         self.oldState = None
         self.z = np.zeros(W_SIZE)
+        self.t = 0
 
     def action(self, data):
         if (data["type"] == "update"):
@@ -57,6 +58,11 @@ class Agent:
         global Ws
         if (self.oldState == None): # First update, initializing the state
             self.oldState = state
+            return
+
+        self.t += 1
+        if (self.t % 5 != 0):
+            self.sio.emit("action-" + str(self.id), {"type": None})
             return
 
         Xsa = getXsa(state) #Xsa is a list for each Xs for a given a

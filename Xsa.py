@@ -12,6 +12,13 @@ def getAction(state, actionId):
 
 def getFeatures(state):
     features = []
+    print(state)
+    features += [
+        int(state["cards"][0]),
+        int(state["cards"][1]),
+        1 - int(state["cards"][0]),
+        1 - int(state["cards"][1]),
+    ]
     for blob in (state["army"] + state["enemy"]):
         features.append(1 - int(blob["alive"]))
     for blob in state["army"]:
