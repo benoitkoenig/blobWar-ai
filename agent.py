@@ -34,7 +34,6 @@ class Agent:
         self.name = name
         self.oldXsa = np.zeros(W_SIZE)
         self.oldState = None
-        self.t = 0
         self.z = np.zeros(W_SIZE)
 
     def action(self, data):
@@ -59,10 +58,6 @@ class Agent:
         if (self.oldState == None): # First update, initializing the state
             self.oldState = state
             return
-        self.t += 1
-        if (self.t % 15 != 0):
-            self.sio.emit("action-" + str(self.id), {"type": None})
-            return # give time for our action to have a consequence
 
         Xsa = getXsa(state) #Xsa is a list for each Xs for a given a
         Q = np.array([np.dot(Ws[self.name], X) for X in Xsa])
