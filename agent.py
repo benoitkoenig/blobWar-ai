@@ -5,11 +5,14 @@ from Xsa import getXsa, getAction
 
 W_SIZE = 5265
 
-# w = np.zeros(W_SIZE)
+Ws_saved = {
+    "BotGhostBloc": np.memmap("W_ghost_bloc", dtype='float32', mode='r+', shape=(W_SIZE)),
+    "BotDashDash": np.memmap("W_dash_dash", dtype='float32', mode='r+', shape=(W_SIZE)),
+}
 
 Ws = {
-    "BotGhostBloc": np.zeros(W_SIZE),
-    "BotDashDash": np.zeros(W_SIZE),
+    "BotGhostBloc": np.copy(Ws_saved["BotGhostBloc"]),
+    "BotDashDash": np.copy(Ws_saved["BotDashDash"]),
 }
 
 np.set_printoptions(threshold=np.inf)
@@ -41,16 +44,14 @@ class Agent:
             self.endOfGame(data["value"])
 
     def endOfGame(self, value):
-        global Ws
+        global Ws, Ws_saved
 
         reward = determineEnfOfGameReward(value)
         self.z = traceDecay * gamma * self.z + self.oldXsa
         delta = reward - np.dot(Ws[self.name], self.oldXsa)
         Ws[self.name] = Ws[self.name] + alpha * delta * self.z
 
-        print(self.name)
-        print(Ws[self.name])
-
+        Ws_saved[self.name][:] = Ws[self.name][:]
         self.sio.emit("action-" + str(self.id), {"type": None}) # Needs to play one last time for the game to properly end
 
     def update(self, state):
