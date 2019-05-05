@@ -7,11 +7,11 @@ def determineReward(state, newState):
     alliesKilled = oldAliveAllies - newAliveAllies
     enemiesKilled = oldAliveEnemies - newAliveEnemies
 
-    return enemiesKilled * 50 - alliesKilled * 40 - 1
+    return enemiesKilled * 50 - alliesKilled * 50 - 1
 
 def determineEnfOfGameReward(value):
     if (value == "Victory !"):
         return 500
     if (value == "Defeat"):
-        return 0
-    return 100
+        return -50
+    return -20
