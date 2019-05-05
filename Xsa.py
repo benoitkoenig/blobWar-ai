@@ -12,7 +12,6 @@ def getAction(state, actionId):
 
 def getFeatures(state):
     features = []
-    print(state)
     features += [
         int(state["cards"][0]),
         int(state["cards"][1]),

@@ -6,13 +6,13 @@ from Xsa import getXsa, getAction
 W_SIZE = 5373
 
 Ws_saved = {
-    # "BotGhostBloc": np.memmap("W_ghost_bloc", dtype='float32', mode='r+', shape=(W_SIZE)),
-    # "BotDashDash": np.memmap("W_dash_dash", dtype='float32', mode='r+', shape=(W_SIZE)),
+    "BotGhostBloc": np.memmap("W_ghost_bloc", dtype='float32', mode='r+', shape=(W_SIZE)),
+    "BotDashDash": np.memmap("W_dash_dash", dtype='float32', mode='r+', shape=(W_SIZE)),
 }
 
 Ws = {
-    # "BotGhostBloc": np.copy(Ws_saved["BotGhostBloc"]),
-    # "BotDashDash": np.copy(Ws_saved["BotDashDash"]),
+    "BotGhostBloc": np.copy(Ws_saved["BotGhostBloc"]),
+    "BotDashDash": np.copy(Ws_saved["BotDashDash"]),
 }
 
 np.set_printoptions(threshold=np.inf)
@@ -21,7 +21,7 @@ print("Loading Ws")
 for key in Ws:
     print(key, Ws[key].min(), Ws[key].max())
 
-alpha = 1. / W_SIZE
+alpha = 5. / W_SIZE
 epsilon = 0.1
 gamma = 0.9
 traceDecay = 0.9
