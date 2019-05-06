@@ -1,6 +1,14 @@
 import math
 import numpy as np
 
+def calculateAngle(a, b, c):
+    vector1 = (a["x"] - b["x"]) + (a["y"] - b["y"])* 1j
+    vector2 = (c["x"] - b["x"]) + (c["y"] - b["y"])* 1j
+    angle1 = np.angle(vector1)
+    angle2 = np.angle(vector2)
+    angle = (angle1 - angle2 + 2) % 2
+    return angle
+
 def getAction(state, actionId):
     actions = []
     for blobId in range(len(state["army"])):
@@ -11,32 +19,51 @@ def getAction(state, actionId):
     return actions[actionId]
 
 def getFeatures(state):
-    features = []
-    features += [
+    allBlobs = state["army"] + state["enemy"]
+    features = [
         int(state["cards"][0]),
         int(state["cards"][1]),
         1 - int(state["cards"][0]),
         1 - int(state["cards"][1]),
     ]
-    for blob in (state["army"] + state["enemy"]):
-        features.append(1 - int(blob["alive"]))
+    for blob in allBlobs:
+        features += [
+            1 - int(blob["alive"]),
+            int(blob["status"] == "normal"),
+            int(blob["status"] == "hat"),
+            int(blob["status"] == "ghost"),
+        ]
     for blob in state["army"]:
         for otherBlob in state["enemy"]:
-            distance = math.sqrt(((blob["x"] - otherBlob["x"]) ** 2 + (blob["y"] - otherBlob["y"]) ** 2) / 2)
-            if (blob["destination"] == None):
-                distanceToDest = distance
+            if (blob["alive"] == False) | (otherBlob["alive"] == False):
+                features += [0] * 21
             else:
-                distanceToDest = math.sqrt((blob["destination"]["x"] - otherBlob["x"]) ** 2 + (blob["destination"]["y"] - otherBlob["y"]) ** 2) / 2
-            for d in [distance, (1 - distance) ** 2, (1 - distanceToDest) ** 2]:
-                features += [
-                    int(otherBlob["alive"]) * int(blob["alive"]) * d,
-                    int(otherBlob["alive"]) * int(blob["alive"]) * d * int(blob["status"] == "normal"),
-                    int(otherBlob["alive"]) * int(blob["alive"]) * d * int(blob["status"] == "hat"),
-                    int(otherBlob["alive"]) * int(blob["alive"]) * d * int(blob["status"] == "ghost"),
-                    int(otherBlob["alive"]) * int(blob["alive"]) * d * int(otherBlob["status"] == "normal"),
-                    int(otherBlob["alive"]) * int(blob["alive"]) * d * int(otherBlob["status"] == "hat"),
-                    int(otherBlob["alive"]) * int(blob["alive"]) * d * int(otherBlob["status"] == "ghost"),
+                distance = math.sqrt(((blob["x"] - otherBlob["x"]) ** 2 + (blob["y"] - otherBlob["y"]) ** 2) / 2)
+                if (blob["destination"] == None):
+                    distanceToDest = distance
+                else:
+                    distanceToDest = math.sqrt(((blob["destination"]["x"] - otherBlob["x"]) ** 2 + (blob["destination"]["y"] - otherBlob["y"]) ** 2) / 2)
+                statuses = [
+                        1,
+                        int(blob["status"] == "normal"),
+                        int(blob["status"] == "hat"),
+                        int(blob["status"] == "ghost"),
+                        int(otherBlob["status"] == "normal"),
+                        int(otherBlob["status"] == "hat"),
+                        int(otherBlob["status"] == "ghost"),
                 ]
+                for d in [distance, (1 - distance) ** 2, (1 - distanceToDest) ** 2]:
+                    features += [d * s for s in statuses]
+    for i in range(6):
+        for index1 in range(6):
+            for k in range(5 - index1):
+                index2 = index1 + k + 1
+                if (i != index1) & (i != index2):
+                    if (allBlobs[index1]["alive"] == False) | (allBlobs[i]["alive"] == False) | (allBlobs[index2]["alive"] == False):
+                        features.append(0)
+                    else:
+                        angle = calculateAngle(allBlobs[index1], allBlobs[i], allBlobs[index2])
+                        features.append((1 - abs(angle)) ** 2)
     return features
 
 def getXsa(state):

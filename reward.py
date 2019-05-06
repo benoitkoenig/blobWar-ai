@@ -6,8 +6,10 @@ def determineReward(state, newState):
 
     alliesKilled = oldAliveAllies - newAliveAllies
     enemiesKilled = oldAliveEnemies - newAliveEnemies
+    card0used = state["cards"][0] == True & newState["cards"][0] == False
+    card1used = state["cards"][1] == True & newState["cards"][1] == False
 
-    return enemiesKilled * 50 - alliesKilled * 50 - 1
+    return enemiesKilled * 50 - alliesKilled * 50 - 1 - 3 * (card0used + card1used)
 
 def determineEnfOfGameReward(value):
     if (value == "Victory !"):
