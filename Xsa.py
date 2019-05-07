@@ -4,7 +4,7 @@ import numpy as np
 from constants import ARMY_SIZE
 
 def orderArmyByDist(army, x, y):
-    armyCopy = [math.hypot(blob["x"] - x, blob["y"] - y) for blob in army]
+    armyCopy = [2 * int(blob["alive"]) + math.hypot(blob["x"] - x, blob["y"] - y) for blob in army]
     return np.argsort(armyCopy)
 
 def getPairFeatures(state):
