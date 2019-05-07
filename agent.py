@@ -52,7 +52,7 @@ class Agent:
         Ws[self.name] = Ws[self.name] + alpha * delta * self.z
 
         Ws_saved[self.name][:] = Ws[self.name][:]
-        self.sio.emit("action-" + str(self.id), {"type": None}) # Needs to play one last time for the game to properly end
+        self.sio.emit("action-" + str(self.id), []) # Needs to play one last time for the game to properly end
 
     def update(self, state):
         global Ws
@@ -62,7 +62,7 @@ class Agent:
 
         self.t += 1
         if (self.t % 10 != 1):
-            self.sio.emit("action-" + str(self.id), {"type": None})
+            self.sio.emit("action-" + str(self.id), [])
             return
 
         Xsa = getXsa(state) #Xsa is a list for each Xs for a given a
@@ -80,4 +80,4 @@ class Agent:
         self.oldState = state
         self.oldXsa = Xsa[bestActionId].tolist()
         bestAction = getAction(state, bestActionId)
-        self.sio.emit("action-" + str(self.id), bestAction)
+        self.sio.emit("action-" + str(self.id), [bestAction])
