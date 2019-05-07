@@ -20,7 +20,7 @@ print("Loading Ws")
 for key in Ws:
     print(key, Ws[key].min(), Ws[key].max())
 
-alpha = .1 / W_SIZE
+alpha = 1. / W_SIZE
 epsilon = 0.1
 gamma = 0.9
 traceDecay = 0.9
@@ -57,13 +57,19 @@ class Agent:
 
     def update(self, state):
         global Ws
-        if (self.oldState == None): # First update, initializing the state
+
+        self.t += 1
+
+        if(self.t == 1): # Due to exploratory starts, skip the first update, where instant arbitrary kills can occur and add bias
+            self.sio.emit("action-" + str(self.id), [])
+            return
+
+        if (self.t == 2): # First update, initializing the state
             self.oldState = state
             self.oldState["action"] = -1
             return
 
-        self.t += 1
-        if (self.t % 10 != 1):
+        if (self.t % 10 != 3):
             self.sio.emit("action-" + str(self.id), [])
             return
 
