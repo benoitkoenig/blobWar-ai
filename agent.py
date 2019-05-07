@@ -20,7 +20,7 @@ print("Loading Ws")
 for key in Ws:
     print(key, Ws[key].min(), Ws[key].max())
 
-alpha = 5. / W_SIZE
+alpha = .1 / W_SIZE
 epsilon = 0.1
 gamma = 0.9
 traceDecay = 0.9
@@ -59,6 +59,7 @@ class Agent:
         global Ws
         if (self.oldState == None): # First update, initializing the state
             self.oldState = state
+            self.oldState["action"] = -1
             return
 
         self.t += 1
@@ -86,4 +87,5 @@ class Agent:
             actions += getBlobActions(blobId, state, bestActionId)
 
         self.oldState = state
+        self.oldState["action"] = bestActionId
         self.sio.emit("action-" + str(self.id), actions)

@@ -1,0 +1,2 @@
+W_SIZE = 1503
+ARMY_SIZE = 3
