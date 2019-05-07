@@ -1,50 +1,22 @@
 import math
 import numpy as np
 
-def calculateAngle(a, b, c):
-    vector1 = (a["x"] - b["x"]) + (a["y"] - b["y"])* 1j
-    vector2 = (c["x"] - b["x"]) + (c["y"] - b["y"])* 1j
-    angle1 = np.angle(vector1)
-    angle2 = np.angle(vector2)
-    angle = (angle1 - angle2 + 2) % 2
-    return angle
+from constants import ARMY_SIZE
 
-def getAction(state, actionId):
-    actions = []
-    for blobId in range(len(state["army"])):
-        for otherBlob in state["enemy"]:
-            actions.append({"type": "server/setDestination", "idBlob": blobId, "destination": {"x": otherBlob["x"], "y": otherBlob["y"]}})
-            actions.append({"type": "server/triggerCard", "idBlob": blobId, "destination": {"x": otherBlob["x"], "y": otherBlob["y"]}, "idCard": 0})
-            actions.append({"type": "server/triggerCard", "idBlob": blobId, "destination": {"x": otherBlob["x"], "y": otherBlob["y"]}, "idCard": 1})
-    return actions[actionId]
+def orderArmyByDist(army, x, y):
+    armyCopy = [math.hypot(blob["x"] - x, blob["y"] - y) for blob in army]
+    return np.argsort(armyCopy)
 
-def getFeatures(state):
-    allBlobs = state["army"] + state["enemy"]
-    features = [
-        int(state["cards"][0]),
-        int(state["cards"][1]),
-        1 - int(state["cards"][0]),
-        1 - int(state["cards"][1]),
-    ]
-    for blob in allBlobs:
-        features += [
-            1 - int(blob["alive"]),
-            int(blob["status"] == "normal"),
-            int(blob["status"] == "hat"),
-            int(blob["status"] == "ghost"),
-        ]
+def getPairFeatures(state):
+    features = []
     for blob in state["army"]:
+        blobFeatures = []
         for otherBlob in state["enemy"]:
             if (blob["alive"] == False) | (otherBlob["alive"] == False):
-                features += [0] * 21
+                pairFeatures = [0] * 18
             else:
                 distance = math.sqrt(((blob["x"] - otherBlob["x"]) ** 2 + (blob["y"] - otherBlob["y"]) ** 2) / 2)
-                if (blob["destination"] == None):
-                    distanceToDest = distance
-                else:
-                    distanceToDest = math.sqrt(((blob["destination"]["x"] - otherBlob["x"]) ** 2 + (blob["destination"]["y"] - otherBlob["y"]) ** 2) / 2)
                 statuses = [
-                        1,
                         int(blob["status"] == "normal"),
                         int(blob["status"] == "hat"),
                         int(blob["status"] == "ghost"),
@@ -52,30 +24,63 @@ def getFeatures(state):
                         int(otherBlob["status"] == "hat"),
                         int(otherBlob["status"] == "ghost"),
                 ]
-                for d in [distance, (1 - distance) ** 2, (1 - distanceToDest) ** 2]:
-                    features += [d * s for s in statuses]
-    for i in range(6):
-        for index1 in range(6):
-            for k in range(5 - index1):
-                index2 = index1 + k + 1
-                if (i != index1) & (i != index2):
-                    if (allBlobs[index1]["alive"] == False) | (allBlobs[i]["alive"] == False) | (allBlobs[index2]["alive"] == False):
-                        features.append(0)
-                    else:
-                        angle = calculateAngle(allBlobs[index1], allBlobs[i], allBlobs[index2])
-                        features.append((1 - abs(angle)) ** 2)
+                pairFeatures = []
+                for d in [distance, 1 - distance, (1 - distance) ** 2]:
+                    pairFeatures += [d * s for s in statuses]
+            blobFeatures.append(pairFeatures)
+        features.append(blobFeatures)
     return features
 
-def getXsa(state):
-    features = getFeatures(state)
-    Xsa = []
-    zeros = np.zeros(len(features))
-    for actionId in range(27):
-        X = np.empty(0)
-        for i in range(27):
-            if (i == actionId):
-                X = np.concatenate([X, features])
-            else:
-                X = np.concatenate([X, zeros])
-        Xsa.append(X)
-    return Xsa
+def getFeatures(state, blob, pairFeatures):
+    army = orderArmyByDist(state["army"], blob["x"], blob["y"])
+    enemy = orderArmyByDist(state["enemy"], blob["x"], blob["y"])
+    features = [
+        1,
+        int(state["cards"][0]),
+        int(state["cards"][1]),
+        1 - int(state["cards"][0]),
+        1 - int(state["cards"][1]),
+    ]
+    for i in army:
+        for j in enemy:
+            features += pairFeatures[i][j]
+    return features
+
+def getXsaPerBlob(state):
+    XsaPerBlob = []
+    pairFeatures = getPairFeatures(state) # we want to calculate the features for a given pair of blobs only once
+    for blob in state["army"]:
+        features = getFeatures(state, blob, pairFeatures)
+        Xsa = []
+        zeros = np.zeros(len(features))
+        for actionId in range(9):
+            X = np.empty(0)
+            for i in range(9):
+                if (i == actionId):
+                    X = np.concatenate([X, features])
+                else:
+                    X = np.concatenate([X, zeros])
+            Xsa.append(X)
+        XsaPerBlob.append(Xsa)
+    return XsaPerBlob
+
+def getBlobActions(blobId, state, bestActionId):
+    actions = []
+    blob = state["army"][blobId]
+    ennemy = orderArmyByDist(state["enemy"], blob["x"], blob["y"])
+    for i in ennemy:
+        otherBlob = state["enemy"][i]
+        actions += [
+            [
+                {"type": "server/setDestination", "idBlob": blobId, "destination": {"x": otherBlob["x"], "y": otherBlob["y"]}},
+            ],
+            [
+                {"type": "server/setDestination", "idBlob": blobId, "destination": {"x": otherBlob["x"], "y": otherBlob["y"]}},
+                {"type": "server/triggerCard", "idBlob": blobId, "destination": {"x": otherBlob["x"], "y": otherBlob["y"]}, "idCard": 0},
+            ],
+            [
+                {"type": "server/setDestination", "idBlob": blobId, "destination": {"x": otherBlob["x"], "y": otherBlob["y"]}},
+                {"type": "server/triggerCard", "idBlob": blobId, "destination": {"x": otherBlob["x"], "y": otherBlob["y"]}, "idCard": 1},
+            ],
+        ]
+    return actions[bestActionId]
