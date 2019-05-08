@@ -20,7 +20,7 @@ print("Loading Ws")
 for key in Ws:
     print(key, Ws[key].min(), Ws[key].max())
 
-alpha = 5. / W_SIZE
+alpha = 2. / W_SIZE
 epsilon = 0.01
 gamma = 0.9
 traceDecay = 0.9
