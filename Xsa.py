@@ -7,13 +7,15 @@ def orderArmyByDist(army, x, y):
     armyCopy = [2 * int(blob["alive"]) + math.hypot(blob["x"] - x, blob["y"] - y) for blob in army]
     return np.argsort(armyCopy)
 
+distanceForDash = .14 / math.sqrt(2)
+
 def getPairFeatures(state):
     features = []
     for blob in state["army"]:
         blobFeatures = []
         for otherBlob in state["enemy"]:
             if (blob["alive"] == False) | (otherBlob["alive"] == False):
-                pairFeatures = [0] * 18
+                pairFeatures = [0] * 24
             else:
                 distance = math.sqrt(((blob["x"] - otherBlob["x"]) ** 2 + (blob["y"] - otherBlob["y"]) ** 2) / 2)
                 statuses = [
@@ -25,7 +27,7 @@ def getPairFeatures(state):
                         int(otherBlob["status"] == "ghost"),
                 ]
                 pairFeatures = []
-                for d in [distance, 1 - distance, (1 - distance) ** 2]:
+                for d in [distance, 1 - distance, (1 - distance) ** 2, int(distance < distanceForDash)]:
                     pairFeatures += [d * s for s in statuses]
             blobFeatures.append(pairFeatures)
         features.append(blobFeatures)
