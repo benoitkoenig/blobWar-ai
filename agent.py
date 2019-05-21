@@ -10,7 +10,7 @@ from reward import determineReward, determineEnfOfGameReward
 from stateAndActions import getStateVector, getAction
 
 STATE_SIZE = 38
-ACTION_SIZE = 9
+ACTION_SIZE = 27
 
 alpha = .2 / STATE_SIZE
 epsilon = 0.1
@@ -22,8 +22,10 @@ model.add(Dense(24, input_dim=STATE_SIZE, activation="relu"))
 model.add(Dense(24, activation="relu"))
 model.add(Dense(ACTION_SIZE, activation="linear"))
 model.compile(loss="mse", optimizer=Adam(lr=0.001))
-# model._make_predict_function()
 
+# Since the model is going to call fit and predict from socketio callbacks, it will be in a different thread
+# Which means the current session and graph must be explicitely used
+# Also, errors might occur if some operations happen in parrallel, which won't happen if only one bot trains at once
 session = K.get_session()
 graph = tf.get_default_graph()
 
@@ -46,10 +48,11 @@ class Agent:
             self.endOfGame(data["value"])
 
     def endOfGame(self, value):
+        global model, session, graph
+
         if (self.oldStateVector != []): # Due to exploratory starts, this could happen
             with session.as_default():
                 with graph.as_default(): # Inside the socketio event, the thread is different, generating a new tensorflow session
-                    time.sleep(1) # time.sleep tackles an obscure race condition. I need to find what race condition it is
                     reward = determineEnfOfGameReward(value)
                     target_f = model.predict(self.oldStateVector)
                     target_f[0][self.oldAction] = reward
@@ -59,7 +62,7 @@ class Agent:
         self.sio.emit("action-" + str(self.id), []) # Needs to play one last time for the game to properly end
 
     def update(self, state):
-        global model, graph
+        global model, session, graph
 
         self.t += 1
 
@@ -73,7 +76,6 @@ class Agent:
 
         with session.as_default():
             with graph.as_default(): # Inside the socketio event, the thread is different, generating a new tensorflow session
-                time.sleep(1) # time.sleep tackles an obscure race condition. I need to find what race condition it is
                 stateVector = np.array(getStateVector(state))
                 stateVector = np.reshape(stateVector, [1, STATE_SIZE])
                 actionValues = model.predict(stateVector)[0]
