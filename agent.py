@@ -1,39 +1,42 @@
 import numpy as np
+import tensorflow as tf
+from tensorflow.keras import backend as K
+from tensorflow.keras.layers import Dense
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.optimizers import Adam
+import time
 
-from constants import W_SIZE, ARMY_SIZE
 from reward import determineReward, determineEnfOfGameReward
-from Xsa import getXsaPerBlob, getBlobActions
+from stateAndActions import getStateVector, getAction
 
-Ws_saved = {
-    "RBotGhostBloc": np.memmap("W_ghost_bloc", dtype='float32', mode='r+', shape=(W_SIZE)),
-    "RBotDashDash": np.memmap("W_dash_dash", dtype='float32', mode='r+', shape=(W_SIZE)),
-}
+STATE_SIZE = 38
+ACTION_SIZE = 9
 
-Ws = {
-    "RBotGhostBloc": np.copy(Ws_saved["RBotGhostBloc"]),
-    "RBotDashDash": np.copy(Ws_saved["RBotDashDash"]),
-}
-
-np.set_printoptions(threshold=np.inf)
-
-print("Loading Ws")
-for key in Ws:
-    print(key, Ws[key].min(), Ws[key].max())
-
-alpha = .2 / W_SIZE
-epsilon = 0.002
+alpha = .2 / STATE_SIZE
+epsilon = 0.1
 gamma = 0.9
 traceDecay = 0.9
+
+model = Sequential()
+model.add(Dense(24, input_dim=STATE_SIZE, activation="relu"))
+model.add(Dense(24, activation="relu"))
+model.add(Dense(ACTION_SIZE, activation="linear"))
+model.compile(loss="mse", optimizer=Adam(lr=0.001))
+# model._make_predict_function()
+
+session = K.get_session()
+graph = tf.get_default_graph()
+
+np.set_printoptions(threshold=np.inf)
 
 class Agent:
     def __init__(self, sio, id, name):
         sio.emit("learning_agent_created", {"id": id})
         self.sio = sio
         self.id = id
-        self.name = name
-        self.oldXsa = [np.zeros(W_SIZE), np.zeros(W_SIZE), np.zeros(W_SIZE)]
         self.oldState = None
-        self.z = [np.zeros(W_SIZE), np.zeros(W_SIZE), np.zeros(W_SIZE)]
+        self.oldStateVector= []
+        self.oldAction = None
         self.t = 0
 
     def action(self, data):
@@ -43,20 +46,20 @@ class Agent:
             self.endOfGame(data["value"])
 
     def endOfGame(self, value):
-        global Ws, Ws_saved
+        if (self.oldStateVector != []): # Due to exploratory starts, this could happen
+            with session.as_default():
+                with graph.as_default(): # Inside the socketio event, the thread is different, generating a new tensorflow session
+                    time.sleep(1) # time.sleep tackles an obscure race condition. I need to find what race condition it is
+                    reward = determineEnfOfGameReward(value)
+                    target_f = model.predict(self.oldStateVector)
+                    target_f[0][self.oldAction] = reward
+                    model.fit(self.oldStateVector, target_f, epochs=1, verbose=0)
 
-        reward = determineEnfOfGameReward(value)
-        for blobId in range(ARMY_SIZE):
-            self.z[blobId] = traceDecay * gamma * self.z[blobId] + self.oldXsa[blobId]
-            delta = reward - np.dot(Ws[self.name], self.oldXsa[blobId])
-            Ws[self.name] = Ws[self.name] + alpha * delta * self.z[blobId]
-
-        Ws_saved[self.name][:] = Ws[self.name][:]
         print("End of game after", self.t, "episodes")
         self.sio.emit("action-" + str(self.id), []) # Needs to play one last time for the game to properly end
 
     def update(self, state):
-        global Ws
+        global model, graph
 
         self.t += 1
 
@@ -64,34 +67,33 @@ class Agent:
             self.sio.emit("action-" + str(self.id), [])
             return
 
-        if (self.t == 2): # First update, initializing the state
-            self.oldState = state
-            self.oldState["action"] = -1
-            return
-
-        if (self.t % 10 != 3):
+        if (self.t % 8 != 2):
             self.sio.emit("action-" + str(self.id), [])
             return
 
-        actions = []
-        reward = determineReward(self.oldState, state)
+        with session.as_default():
+            with graph.as_default(): # Inside the socketio event, the thread is different, generating a new tensorflow session
+                time.sleep(1) # time.sleep tackles an obscure race condition. I need to find what race condition it is
+                stateVector = np.array(getStateVector(state))
+                stateVector = np.reshape(stateVector, [1, STATE_SIZE])
+                actionValues = model.predict(stateVector)[0]
+                maxActionValue = actionValues.max()
 
-        XsaPerBlob = getXsaPerBlob(state) #Xsa is a list for each blobs of a list for each action of an X value
-        for blobId in range(ARMY_SIZE):
-            Xsa = XsaPerBlob[blobId]
-            Q = np.array([np.dot(Ws[self.name], X) for X in Xsa])
-            if (np.random.uniform() < epsilon):
-                bestActionId = np.random.choice(range(len(Q)))
-            else:
-                bestActionId = np.random.choice(np.flatnonzero(Q == Q.max()))
+                if (self.oldStateVector != []):
+                    reward = determineReward(self.oldState, state, self.oldAction)
+                    target = reward + gamma * maxActionValue
+                    target_f = model.predict(self.oldStateVector)
+                    target_f[0][self.oldAction] = target
+                    model.fit(self.oldStateVector, target_f, epochs=1, verbose=0)
 
-            self.z[blobId] = traceDecay * gamma * self.z[blobId] + self.oldXsa[blobId]
-            delta = reward + gamma * Q[bestActionId] - np.dot(Ws[self.name], self.oldXsa[blobId])
-            Ws[self.name] = Ws[self.name] + alpha * delta * self.z[blobId]
+        if (np.random.uniform() < epsilon):
+            bestActionId = np.random.choice(ACTION_SIZE)
+        else:
+            bestActionId = np.random.choice(np.flatnonzero(actionValues == maxActionValue))
 
-            self.oldXsa[blobId] = Xsa[bestActionId].tolist()
-            actions += getBlobActions(blobId, state, bestActionId)
-
+        self.oldStateVector = stateVector
         self.oldState = state
-        self.oldState["action"] = bestActionId
-        self.sio.emit("action-" + str(self.id), actions)
+        self.oldAction = bestActionId
+
+        action = getAction(state, bestActionId)
+        self.sio.emit("action-" + str(self.id), action)
