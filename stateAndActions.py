@@ -1,6 +1,8 @@
 import math
 import numpy as np
 
+distanceToKill = 0.04 / math.sqrt(2)
+
 def getStateVector(state):
     stateVector = [
         1.,
@@ -17,9 +19,18 @@ def getStateVector(state):
             float(blob["status"] == "ghost"),
         ]
     for blob in state["army"]:
+        destinationVector = [0, 0]
+        if (blob["destination"] != None):
+            destinationVector = [blob["destination"]["x"] - blob["x"], blob["destination"]["y"] - blob["y"]]
         for otherBlob in state["enemy"]:
             distance = math.sqrt(((blob["x"] - otherBlob["x"]) ** 2 + (blob["y"] - otherBlob["y"]) ** 2) / 2)
-            stateVector.append(distance)
+            twoBlobsVector = [otherBlob["x"] - blob["x"], otherBlob["y"] - blob["y"]]
+            lengthProduct = np.linalg.norm(destinationVector) * np.linalg.norm(twoBlobsVector)
+            if lengthProduct == 0:
+                scalar = 0
+            else:
+                scalar = np.dot(destinationVector, twoBlobsVector) / lengthProduct
+            stateVector += [distance, float(distance <= distanceToKill), scalar ** 2]
     return stateVector
 
 def getAction(state, bestActionId):

@@ -3,25 +3,23 @@ import tensorflow as tf
 from tensorflow.keras import backend as K
 from tensorflow.keras.layers import Dense
 from tensorflow.keras.models import Sequential
-from tensorflow.keras.optimizers import Adam
+from tensorflow.train import AdamOptimizer
 import time
 
+from constants import ACTION_SIZE, STATE_SIZE
 from reward import determineReward, determineEnfOfGameReward
 from stateAndActions import getStateVector, getAction
 
-STATE_SIZE = 38
-ACTION_SIZE = 27
-
-alpha = .2 / STATE_SIZE
-epsilon = 0.1
-gamma = 0.9
-traceDecay = 0.9
+epsilon = 0.02
+gamma = 0.95
 
 model = Sequential()
 model.add(Dense(24, input_dim=STATE_SIZE, activation="relu"))
-model.add(Dense(24, activation="relu"))
+# model.add(Dense(24, activation="relu"))
 model.add(Dense(ACTION_SIZE, activation="linear"))
-model.compile(loss="mse", optimizer=Adam(lr=0.001))
+model.compile(loss="mse", optimizer=AdamOptimizer(learning_rate=.002))
+
+model.load_weights("./weights/weights")
 
 # Since the model is going to call fit and predict from socketio callbacks, it will be in a different thread
 # Which means the current session and graph must be explicitely used
@@ -57,7 +55,7 @@ class Agent:
                     target_f = model.predict(self.oldStateVector)
                     target_f[0][self.oldAction] = reward
                     model.fit(self.oldStateVector, target_f, epochs=1, verbose=0)
-
+                    model.save_weights("./weights/weights")
         print("End of game after", self.t, "episodes")
         self.sio.emit("action-" + str(self.id), []) # Needs to play one last time for the game to properly end
 
