@@ -11,17 +11,17 @@ def determineReward(state, newState):
     card1used = (state["cards"][1] == True) & (newState["cards"][1] == False)
 
     if (alliesKilled < enemiesKilled):
-        print(">>>>>>>>>>>>>>>>>>>>>>>>> Proper kill")
+        print(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> Proper kill")
 
-    return enemiesKilled * 5 - alliesKilled * 5 - 1 - 3 * (card0used + card1used)
+    return enemiesKilled * 19 - alliesKilled * 21 - 1 - 3 * (card0used + card1used)
 
 def determineEndOfGameReward(state, newState):
     value = newState["value"]
     base_reward = determineReward(state, newState)
     if (value == "Victory !"):
-        return base_reward + 40
+        return base_reward + 5
     if (value == "Defeat"):
-        return base_reward - 15
+        return base_reward - 5
     if (value == "Timeout"):
         return base_reward - 2
     return base_reward + 2

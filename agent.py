@@ -11,41 +11,37 @@ from stateAndActions import getStateVector, getAction
 
 tf.enable_eager_execution()
 
-epsilon = .05
-discounting_factor = .95
+epsilon = .02
+discounting_factor = .8
 
 class ActorCriticModel(Model):
-    def __init__(self, state_size, action_size):
+    def __init__(self):
         super(ActorCriticModel, self).__init__()
-        self.state_size = state_size
-        self.action_size = action_size
-        self.dense1 = Dense(100, activation='relu')
-        self.dense2 = Dense(100, activation='relu')
-        self.policy_logits = Dense(action_size)
-        self.dense3 = Dense(100, activation='relu')
+        self.dense1 = Dense(24, activation='relu')
+        self.policy_logits = Dense(ACTION_SIZE)
+        self.dense2 = Dense(24, activation='relu')
         self.values = Dense(1)
 
     def call(self, inputs):
         # Forward pass
         x = self.dense1(inputs)
-        x = self.dense2(inputs)
         logits = self.policy_logits(x)
-        v1 = self.dense3(inputs)
+        v1 = self.dense2(inputs)
         values = self.values(v1)
         return logits, values
 
-opt = tf.train.AdamOptimizer(.0005)
-global_model = ActorCriticModel(STATE_SIZE, ACTION_SIZE)
+opt = tf.train.AdamOptimizer(.000000000001, use_locking=True)
+global_model = ActorCriticModel()
 
 global_model(tf.convert_to_tensor(np.random.random((1, STATE_SIZE))))
-# global_model.load_weights("weights/weights")
+global_model.load_weights("weights/weights")
 
 class Agent:
     def __init__(self, sio, id, name):
         self.sio = sio
         self.id = id
         self.t = 0
-        self.local_model = ActorCriticModel(STATE_SIZE, ACTION_SIZE)
+        self.local_model = ActorCriticModel()
         self.local_model.set_weights(global_model.get_weights())
         self.stateVectors = []
         self.actionIds = []
@@ -72,7 +68,7 @@ class Agent:
             total_loss = self.compute_loss()
         grads = tape.gradient(total_loss, self.local_model.trainable_weights)
         opt.apply_gradients(zip(grads, global_model.trainable_weights))
-        # global_model.save_weights("weights/weights")
+        global_model.save_weights("weights/weights")
 
         print("End of game after", self.t, "episodes")
         self.sio.emit("action-" + str(self.id), []) # Needs to play one last time for the game to properly end
@@ -85,10 +81,9 @@ class Agent:
             reward_sum = self.rewards[i] + discounting_factor * reward_sum
             discounted_rewards[i] = reward_sum
 
-        logits, values = self.local_model(tf.convert_to_tensor(self.stateVectors))
+        logits, values = self.local_model(tf.convert_to_tensor(np.vstack(self.stateVectors)))
 
-        advantage = tf.convert_to_tensor(np.array(discounted_rewards)) - values
-
+        advantage = tf.convert_to_tensor(np.array(discounted_rewards)[:, None]) - values
         value_loss = advantage ** 2
 
         policy = tf.nn.softmax(logits)
@@ -108,12 +103,13 @@ class Agent:
             self.sio.emit("action-" + str(self.id), [])
             return
 
-        if (self.t % 8 != 2):
+        if (self.t % 20 != 2):
             self.sio.emit("action-" + str(self.id), [])
             return
 
         stateVector = np.array(getStateVector(state))
         logits, _ = self.local_model(tf.convert_to_tensor(np.reshape(stateVector, [1, STATE_SIZE])))
+        print(logits)
         probs = tf.nn.softmax(logits)
         if (np.random.random() < epsilon):
             bestActionId = np.random.choice(ACTION_SIZE)
