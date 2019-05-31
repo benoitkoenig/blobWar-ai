@@ -37,17 +37,25 @@ def getAction(state, bestActionId):
     actions = []
     for blobId in range(len(state["army"])):
         for otherBlob in state["enemy"]:
+            ally1 = (blobId + 1) % 3
+            ally2 = (blobId + 2) % 3
             actions += [
                 [
                     {"type": "server/setDestination", "idBlob": blobId, "destination": {"x": otherBlob["x"], "y": otherBlob["y"]}},
+                    {"type": "server/setDestination", "idBlob": ally1, "destination": {"x": state["army"][ally1]["x"], "y": state["army"][ally1]["y"]}},
+                    {"type": "server/setDestination", "idBlob": ally2, "destination": {"x": state["army"][ally2]["x"], "y": state["army"][ally2]["y"]}},
                 ],
                 [
                     {"type": "server/setDestination", "idBlob": blobId, "destination": {"x": otherBlob["x"], "y": otherBlob["y"]}},
                     {"type": "server/triggerCard", "idBlob": blobId, "destination": {"x": otherBlob["x"], "y": otherBlob["y"]}, "idCard": 0},
+                    {"type": "server/setDestination", "idBlob": ally1, "destination": {"x": state["army"][ally1]["x"], "y": state["army"][ally1]["y"]}},
+                    {"type": "server/setDestination", "idBlob": ally2, "destination": {"x": state["army"][ally2]["x"], "y": state["army"][ally2]["y"]}},
                 ],
                 [
                     {"type": "server/setDestination", "idBlob": blobId, "destination": {"x": otherBlob["x"], "y": otherBlob["y"]}},
                     {"type": "server/triggerCard", "idBlob": blobId, "destination": {"x": otherBlob["x"], "y": otherBlob["y"]}, "idCard": 1},
+                    {"type": "server/setDestination", "idBlob": ally1, "destination": {"x": state["army"][ally1]["x"], "y": state["army"][ally1]["y"]}},
+                    {"type": "server/setDestination", "idBlob": ally2, "destination": {"x": state["army"][ally2]["x"], "y": state["army"][ally2]["y"]}},
                 ],
             ]
     return actions[bestActionId]

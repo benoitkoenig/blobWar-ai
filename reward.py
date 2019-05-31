@@ -1,4 +1,4 @@
-def determineReward(state, newState, action):
+def determineReward(state, newState):
     newAliveAllies = sum(s["alive"] for s in newState["army"])
     newAliveEnemies = sum(s["alive"] for s in newState["enemy"])
     oldAliveAllies = sum(s["alive"] for s in state["army"])
@@ -6,18 +6,22 @@ def determineReward(state, newState, action):
 
     alliesKilled = oldAliveAllies - newAliveAllies
     enemiesKilled = oldAliveEnemies - newAliveEnemies
+
     card0used = (state["cards"][0] == True) & (newState["cards"][0] == False)
     card1used = (state["cards"][1] == True) & (newState["cards"][1] == False)
 
-    cardUnavailable = 0
-    if ((action % 3 == 1) & (state["cards"][0] == False)) | ((action % 3 == 2) & (state["cards"][1] == False)):
-        cardUnavailable = 1 # Penalty for using a spell that is not available. Hope this will prevent wrong returns
+    if (alliesKilled < enemiesKilled):
+        print(">>>>>>>>>>>>>>>>>>>>>>>>> Proper kill")
 
-    return enemiesKilled * 5 - alliesKilled * 5 - 1 - 3 * (card0used + card1used) - 20 * cardUnavailable
+    return enemiesKilled * 5 - alliesKilled * 5 - 1 - 3 * (card0used + card1used)
 
-def determineEnfOfGameReward(value):
+def determineEndOfGameReward(state, newState):
+    value = newState["value"]
+    base_reward = determineReward(state, newState)
     if (value == "Victory !"):
-        return 40
+        return base_reward + 40
     if (value == "Defeat"):
-        return -15
-    return 2
+        return base_reward - 15
+    if (value == "Timeout"):
+        return base_reward - 2
+    return base_reward + 2

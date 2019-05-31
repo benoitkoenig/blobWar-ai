@@ -1,67 +1,107 @@
 import numpy as np
 import tensorflow as tf
-from tensorflow.keras import backend as K
+from tensorflow.keras import Model
 from tensorflow.keras.layers import Dense
-from tensorflow.keras.models import Sequential
 from tensorflow.train import AdamOptimizer
 import time
 
 from constants import ACTION_SIZE, STATE_SIZE
-from reward import determineReward, determineEnfOfGameReward
+from reward import determineReward, determineEndOfGameReward
 from stateAndActions import getStateVector, getAction
 
-epsilon = 0.02
-gamma = 0.95
+tf.enable_eager_execution()
 
-model = Sequential()
-model.add(Dense(24, input_dim=STATE_SIZE, activation="relu"))
-# model.add(Dense(24, activation="relu"))
-model.add(Dense(ACTION_SIZE, activation="linear"))
-model.compile(loss="mse", optimizer=AdamOptimizer(learning_rate=.002))
+epsilon = .05
+discounting_factor = .95
 
-model.load_weights("./weights/weights")
+class ActorCriticModel(Model):
+    def __init__(self, state_size, action_size):
+        super(ActorCriticModel, self).__init__()
+        self.state_size = state_size
+        self.action_size = action_size
+        self.dense1 = Dense(100, activation='relu')
+        self.dense2 = Dense(100, activation='relu')
+        self.policy_logits = Dense(action_size)
+        self.dense3 = Dense(100, activation='relu')
+        self.values = Dense(1)
 
-# Since the model is going to call fit and predict from socketio callbacks, it will be in a different thread
-# Which means the current session and graph must be explicitely used
-# Also, errors might occur if some operations happen in parrallel, which won't happen if only one bot trains at once
-session = K.get_session()
-graph = tf.get_default_graph()
+    def call(self, inputs):
+        # Forward pass
+        x = self.dense1(inputs)
+        x = self.dense2(inputs)
+        logits = self.policy_logits(x)
+        v1 = self.dense3(inputs)
+        values = self.values(v1)
+        return logits, values
 
-np.set_printoptions(threshold=np.inf)
+opt = tf.train.AdamOptimizer(.0005)
+global_model = ActorCriticModel(STATE_SIZE, ACTION_SIZE)
+
+global_model(tf.convert_to_tensor(np.random.random((1, STATE_SIZE))))
+# global_model.load_weights("weights/weights")
 
 class Agent:
     def __init__(self, sio, id, name):
-        sio.emit("learning_agent_created", {"id": id})
         self.sio = sio
         self.id = id
-        self.oldState = None
-        self.oldStateVector= []
-        self.oldAction = None
         self.t = 0
+        self.local_model = ActorCriticModel(STATE_SIZE, ACTION_SIZE)
+        self.local_model.set_weights(global_model.get_weights())
+        self.stateVectors = []
+        self.actionIds = []
+        self.rewards = []
+        self.oldState = None # Used only to calculate the reward
+        sio.emit("learning_agent_created", {"id": id})
 
     def action(self, data):
         if (data["type"] == "update"):
             self.update(data)
         if (data["type"] == "endOfGame"):
-            self.endOfGame(data["value"])
+            self.endOfGame(data)
 
-    def endOfGame(self, value):
-        global model, session, graph
+    def endOfGame(self, state):
+        global global_model
+        if (self.t < 2):
+            # The game ended too soon. May happen due to exploratory starts
+            self.sio.emit("action-" + str(self.id), []) # Needs to play one last time for the game to properly end
+            return
 
-        if (self.oldStateVector != []): # Due to exploratory starts, this could happen
-            with session.as_default():
-                with graph.as_default(): # Inside the socketio event, the thread is different, generating a new tensorflow session
-                    reward = determineEnfOfGameReward(value)
-                    target_f = model.predict(self.oldStateVector)
-                    target_f[0][self.oldAction] = reward
-                    model.fit(self.oldStateVector, target_f, epochs=1, verbose=0)
-                    model.save_weights("./weights/weights")
+        self.rewards.append(determineEndOfGameReward(self.oldState, state))
+
+        with tf.GradientTape() as tape:
+            total_loss = self.compute_loss()
+        grads = tape.gradient(total_loss, self.local_model.trainable_weights)
+        opt.apply_gradients(zip(grads, global_model.trainable_weights))
+        # global_model.save_weights("weights/weights")
+
         print("End of game after", self.t, "episodes")
         self.sio.emit("action-" + str(self.id), []) # Needs to play one last time for the game to properly end
 
-    def update(self, state):
-        global model, session, graph
+    def compute_loss(self):
+        episodes_count = len(self.actionIds)
+        discounted_rewards = np.zeros(episodes_count)
+        reward_sum = 0
+        for i in reversed(range(episodes_count)):
+            reward_sum = self.rewards[i] + discounting_factor * reward_sum
+            discounted_rewards[i] = reward_sum
 
+        logits, values = self.local_model(tf.convert_to_tensor(self.stateVectors))
+
+        advantage = tf.convert_to_tensor(np.array(discounted_rewards)) - values
+
+        value_loss = advantage ** 2
+
+        policy = tf.nn.softmax(logits)
+        entropy = tf.nn.softmax_cross_entropy_with_logits_v2(labels=policy, logits=logits)
+
+        policy_loss = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=self.actionIds, logits=logits)
+        policy_loss *= tf.stop_gradient(advantage)
+        policy_loss -= 0.01 * entropy
+        total_loss = tf.reduce_mean((0.5 * value_loss + policy_loss))
+
+        return total_loss
+
+    def update(self, state):
         self.t += 1
 
         if(self.t == 1): # Due to exploratory starts, skip the first update, where instant arbitrary kills can occur and add bias
@@ -72,28 +112,19 @@ class Agent:
             self.sio.emit("action-" + str(self.id), [])
             return
 
-        with session.as_default():
-            with graph.as_default(): # Inside the socketio event, the thread is different, generating a new tensorflow session
-                stateVector = np.array(getStateVector(state))
-                stateVector = np.reshape(stateVector, [1, STATE_SIZE])
-                actionValues = model.predict(stateVector)[0]
-                maxActionValue = actionValues.max()
-
-                if (self.oldStateVector != []):
-                    reward = determineReward(self.oldState, state, self.oldAction)
-                    target = reward + gamma * maxActionValue
-                    target_f = model.predict(self.oldStateVector)
-                    target_f[0][self.oldAction] = target
-                    model.fit(self.oldStateVector, target_f, epochs=1, verbose=0)
-
-        if (np.random.uniform() < epsilon):
+        stateVector = np.array(getStateVector(state))
+        logits, _ = self.local_model(tf.convert_to_tensor(np.reshape(stateVector, [1, STATE_SIZE])))
+        probs = tf.nn.softmax(logits)
+        if (np.random.random() < epsilon):
             bestActionId = np.random.choice(ACTION_SIZE)
         else:
-            bestActionId = np.random.choice(np.flatnonzero(actionValues == maxActionValue))
+            bestActionId = np.random.choice(ACTION_SIZE, p=probs.numpy()[0])
 
-        self.oldStateVector = stateVector
+        if (self.oldState != None):
+            self.rewards.append(determineReward(self.oldState, state))
+        self.stateVectors.append(stateVector)
+        self.actionIds.append(bestActionId)
         self.oldState = state
-        self.oldAction = bestActionId
 
         action = getAction(state, bestActionId)
         self.sio.emit("action-" + str(self.id), action)
