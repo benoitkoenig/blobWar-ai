@@ -2,7 +2,7 @@ import numpy as np
 import tensorflow as tf
 from tensorflow.keras import Model
 from tensorflow.keras.layers import Dense
-from tensorflow.train import AdamOptimizer
+from tensorflow.train import GradientDescentOptimizer
 import time
 
 from constants import ACTION_SIZE, STATE_SIZE
@@ -11,7 +11,7 @@ from stateAndActions import getStateVector, getAction
 
 tf.enable_eager_execution()
 
-epsilon = .02
+epsilon = .005
 discounting_factor = .8
 
 class ActorCriticModel(Model):
@@ -30,7 +30,7 @@ class ActorCriticModel(Model):
         values = self.values(v1)
         return logits, values
 
-opt = tf.train.AdamOptimizer(.000000000001, use_locking=True)
+opt = tf.train.GradientDescentOptimizer(1e-4, use_locking=True)
 global_model = ActorCriticModel()
 
 global_model(tf.convert_to_tensor(np.random.random((1, STATE_SIZE))))
@@ -41,8 +41,8 @@ class Agent:
         self.sio = sio
         self.id = id
         self.t = 0
-        self.local_model = ActorCriticModel()
-        self.local_model.set_weights(global_model.get_weights())
+        # self.local_model = ActorCriticModel()
+        # self.local_model.set_weights(global_model.get_weights())
         self.stateVectors = []
         self.actionIds = []
         self.rewards = []
@@ -66,7 +66,11 @@ class Agent:
 
         with tf.GradientTape() as tape:
             total_loss = self.compute_loss()
-        grads = tape.gradient(total_loss, self.local_model.trainable_weights)
+            # computed_grads = opt.compute_gradients(self.compute_loss, self.local_model.trainable_weights)
+
+        # grads = tape.gradient(total_loss, self.local_model.trainable_weights)
+        grads = tape.gradient(total_loss, global_model.trainable_weights)
+
         opt.apply_gradients(zip(grads, global_model.trainable_weights))
         global_model.save_weights("weights/weights")
 
@@ -81,7 +85,8 @@ class Agent:
             reward_sum = self.rewards[i] + discounting_factor * reward_sum
             discounted_rewards[i] = reward_sum
 
-        logits, values = self.local_model(tf.convert_to_tensor(np.vstack(self.stateVectors)))
+        # logits, values = self.local_model(tf.convert_to_tensor(np.vstack(self.stateVectors)))
+        logits, values = global_model(tf.convert_to_tensor(np.vstack(self.stateVectors)))
 
         advantage = tf.convert_to_tensor(np.array(discounted_rewards)[:, None]) - values
         value_loss = advantage ** 2
@@ -99,17 +104,15 @@ class Agent:
     def update(self, state):
         self.t += 1
 
-        if(self.t == 1): # Due to exploratory starts, skip the first update, where instant arbitrary kills can occur and add bias
-            self.sio.emit("action-" + str(self.id), [])
-            return
-
+        # Due to exploratory starts, skip the first update, where instant arbitrary kills can occur and add bias
         if (self.t % 20 != 2):
             self.sio.emit("action-" + str(self.id), [])
             return
 
         stateVector = np.array(getStateVector(state))
-        logits, _ = self.local_model(tf.convert_to_tensor(np.reshape(stateVector, [1, STATE_SIZE])))
-        print(logits)
+        # logits, _ = self.local_model(tf.convert_to_tensor(np.reshape(stateVector, [1, STATE_SIZE])))
+        logits, values = global_model(tf.convert_to_tensor(np.reshape(stateVector, [1, STATE_SIZE])))
+        print(values)
         probs = tf.nn.softmax(logits)
         if (np.random.random() < epsilon):
             bestActionId = np.random.choice(ACTION_SIZE)
