@@ -41,8 +41,6 @@ class Agent:
         self.sio = sio
         self.id = id
         self.t = 0
-        # self.local_model = ActorCriticModel()
-        # self.local_model.set_weights(global_model.get_weights())
         self.stateVectors = []
         self.actionIds = []
         self.rewards = []
@@ -68,7 +66,6 @@ class Agent:
             total_loss = self.compute_loss()
             # computed_grads = opt.compute_gradients(self.compute_loss, self.local_model.trainable_weights)
 
-        # grads = tape.gradient(total_loss, self.local_model.trainable_weights)
         grads = tape.gradient(total_loss, global_model.trainable_weights)
 
         opt.apply_gradients(zip(grads, global_model.trainable_weights))
@@ -85,7 +82,6 @@ class Agent:
             reward_sum = self.rewards[i] + discounting_factor * reward_sum
             discounted_rewards[i] = reward_sum
 
-        # logits, values = self.local_model(tf.convert_to_tensor(np.vstack(self.stateVectors)))
         logits, values = global_model(tf.convert_to_tensor(np.vstack(self.stateVectors)))
 
         advantage = tf.convert_to_tensor(np.array(discounted_rewards)[:, None]) - values
@@ -110,14 +106,9 @@ class Agent:
             return
 
         stateVector = np.array(getStateVector(state))
-        # logits, _ = self.local_model(tf.convert_to_tensor(np.reshape(stateVector, [1, STATE_SIZE])))
         logits, values = global_model(tf.convert_to_tensor(np.reshape(stateVector, [1, STATE_SIZE])))
-        print(values)
         probs = tf.nn.softmax(logits)
-        if (np.random.random() < epsilon):
-            bestActionId = np.random.choice(ACTION_SIZE)
-        else:
-            bestActionId = np.random.choice(ACTION_SIZE, p=probs.numpy()[0])
+        bestActionId = np.random.choice(ACTION_SIZE, p=probs.numpy()[0])
 
         if (self.oldState != None):
             self.rewards.append(determineReward(self.oldState, state))
