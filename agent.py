@@ -12,12 +12,12 @@ from stateAndActions import getStateVector, getAction
 tf.enable_eager_execution()
 
 gamma = .9
-epsilon = .005
+epsilon = .1
 
 class ActorModel(Model):
     def __init__(self):
         super(ActorModel, self).__init__()
-        self.dense = Dense(24, activation='relu', use_bias=True)
+        self.dense = Dense(24, activation='relu')
         self.policy_logits = Dense(ACTION_SIZE)
 
     def call(self, inputs):
@@ -28,7 +28,7 @@ class ActorModel(Model):
 class CriticModel(Model):
     def __init__(self):
         super(CriticModel, self).__init__()
-        self.dense = Dense(24, activation='relu', use_bias=True)
+        self.dense = Dense(24, activation='relu')
         self.values = Dense(1)
 
     def call(self, inputs):
@@ -36,8 +36,8 @@ class CriticModel(Model):
         values = self.values(v1)
         return values
 
-optActor = tf.train.GradientDescentOptimizer(1e-5)
-optCritic = tf.train.GradientDescentOptimizer(1e-5)
+optActor = tf.train.GradientDescentOptimizer(1e-3)
+optCritic = tf.train.GradientDescentOptimizer(1e-3)
 actor = ActorModel()
 critic = CriticModel()
 
@@ -66,6 +66,9 @@ class Agent:
             if (self.t % 8 != 2):
                 self.sio.emit("action-{}".format(self.id), [])
                 return
+        if ((state["type"] == "endOfGame") & (self.oldState == None)): # May happen bc of exploratory starts
+            self.sio.emit("action-{}".format(self.id), [])
+            return
         self.update(state)
         self.oldState = state
 
