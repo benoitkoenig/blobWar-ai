@@ -11,13 +11,14 @@ from stateAndActions import getStateVector, getAction
 
 tf.enable_eager_execution()
 
-gamma = .8
+gamma = .9
+epsilon = .005
 
 class ActorModel(Model):
     def __init__(self):
         super(ActorModel, self).__init__()
         self.dense = Dense(24, activation='relu')
-        self.policy_logits = Dense(ACTION_SIZE, activation="relu")
+        self.policy_logits = Dense(ACTION_SIZE, activation="relu", use_bias=True)
 
     def call(self, inputs):
         x = self.dense(inputs)
@@ -27,7 +28,7 @@ class ActorModel(Model):
 class CriticModel(Model):
     def __init__(self):
         super(CriticModel, self).__init__()
-        self.dense = Dense(24, activation='relu')
+        self.dense = Dense(24, activation='relu', use_bias=True)
         self.values = Dense(1)
 
     def call(self, inputs):
@@ -35,13 +36,13 @@ class CriticModel(Model):
         values = self.values(v1)
         return values
 
-optActor = tf.train.GradientDescentOptimizer(1e-3)
-optCritic = tf.train.GradientDescentOptimizer(1e-3)
+optActor = tf.train.GradientDescentOptimizer(1e-5)
+optCritic = tf.train.GradientDescentOptimizer(1e-5)
 actor = ActorModel()
 critic = CriticModel()
 
-actor(tf.convert_to_tensor(np.zeros((1, STATE_SIZE))))
-critic(tf.convert_to_tensor(np.zeros((1, STATE_SIZE))))
+actor(tf.convert_to_tensor(np.random.random((1, STATE_SIZE))))
+critic(tf.convert_to_tensor(np.random.random((1, STATE_SIZE))))
 actor.load_weights("weights/actor")
 critic.load_weights("weights/critic")
 
@@ -75,21 +76,31 @@ class Agent:
         stateVector = tf.convert_to_tensor(np.reshape(stateVector, [1, STATE_SIZE]))
         logits = actor(stateVector)
         probs = tf.nn.softmax(logits).numpy()[0]
+        probs = np.array([(1 - epsilon) * p + epsilon / ACTION_SIZE for p in probs])
         bestActionId = np.random.choice(ACTION_SIZE, p=probs)
 
         reward = determineReward(self.oldState, state)
-
         if (reward != None):
             with tf.GradientTape(persistent=True) as tape:
                 value = critic(self.oldStateVector)[0][0]
                 newValue = critic(stateVector)[0][0]
                 delta = tf.stop_gradient(reward + gamma * newValue - value)
-                val = tf.multiply(delta, value)
+                val = tf.multiply(-delta, value) # Using -delta instead of delta gets the right value
 
                 logits = actor(self.oldStateVector)[0]
                 prob = tf.nn.softmax(logits)[self.oldActionId]
                 const_prob = tf.stop_gradient(prob)
-                pr = tf.multiply(delta / const_prob, prob)
+                epsilon_factor = 1 - epsilon * (1 - 1 / ACTION_SIZE)
+                pr = tf.multiply(-delta * epsilon_factor / const_prob, prob) # Probs look quite good until they stop looking quite good
+
+            newAliveAllies = sum(s["alive"] for s in state["army"])
+            newAliveEnemies = sum(s["alive"] for s in state["enemy"])
+            oldAliveAllies = sum(s["alive"] for s in self.oldState["army"])
+            oldAliveEnemies = sum(s["alive"] for s in self.oldState["enemy"])
+            alliesKilled = oldAliveAllies - newAliveAllies
+            enemiesKilled = oldAliveEnemies - newAliveEnemies
+            if ((alliesKilled == 0) & (enemiesKilled != 0)):
+                print(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> Proper kill")
 
             gradCritic = tape.gradient(val, critic.trainable_weights)
             gradActor = tape.gradient(pr, actor.trainable_weights)
