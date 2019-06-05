@@ -17,8 +17,8 @@ epsilon = .005
 class ActorModel(Model):
     def __init__(self):
         super(ActorModel, self).__init__()
-        self.dense = Dense(24, activation='relu')
-        self.policy_logits = Dense(ACTION_SIZE, activation="relu", use_bias=True)
+        self.dense = Dense(24, activation='relu', use_bias=True)
+        self.policy_logits = Dense(ACTION_SIZE)
 
     def call(self, inputs):
         x = self.dense(inputs)
@@ -75,7 +75,7 @@ class Agent:
         stateVector = np.array(getStateVector(state))
         stateVector = tf.convert_to_tensor(np.reshape(stateVector, [1, STATE_SIZE]))
         logits = actor(stateVector)
-        probs = tf.nn.softmax(logits).numpy()[0]
+        probs = tf.nn.softmax(logits.numpy()[0])
         probs = np.array([(1 - epsilon) * p + epsilon / ACTION_SIZE for p in probs])
         bestActionId = np.random.choice(ACTION_SIZE, p=probs)
 
@@ -85,13 +85,13 @@ class Agent:
                 value = critic(self.oldStateVector)[0][0]
                 newValue = critic(stateVector)[0][0]
                 delta = tf.stop_gradient(reward + gamma * newValue - value)
-                val = tf.multiply(-delta, value) # Using -delta instead of delta gets the right value
+                val = tf.multiply(-delta, value) # Using -delta instead of delta gets the right value, probly cause I use SGD but Sutton adds this value
 
                 logits = actor(self.oldStateVector)[0]
                 prob = tf.nn.softmax(logits)[self.oldActionId]
+                prob = tf.multiply(1 - epsilon, prob) + epsilon / ACTION_SIZE
                 const_prob = tf.stop_gradient(prob)
-                epsilon_factor = 1 - epsilon * (1 - 1 / ACTION_SIZE)
-                pr = tf.multiply(-delta * epsilon_factor / const_prob, prob) # Probs look quite good until they stop looking quite good
+                pr = tf.multiply(-delta / const_prob, prob)
 
             newAliveAllies = sum(s["alive"] for s in state["army"])
             newAliveEnemies = sum(s["alive"] for s in state["enemy"])
