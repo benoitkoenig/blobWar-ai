@@ -61,16 +61,10 @@ class Agent:
             return # The bot does not need this signal
         if (state["type"] == "update"):
             self.t += 1
-
-            # Due to exploratory starts, skip the first update, where instant arbitrary kills can occur and add bias
-            if (self.t % 8 != 2):
+            if (self.t % 8 != 2): # 2 because arbitrary kills may happen at t=1 on exploratory starts
                 self.sio.emit("action-{}".format(self.id), [])
                 return
-        if ((state["type"] == "endOfGame") & (self.oldState == None)): # May happen bc of exploratory starts
-            self.sio.emit("action-{}".format(self.id), [])
-            return
         self.update(state)
-        self.oldState = state
 
     def update(self, state):
         global actor, critic
@@ -118,6 +112,7 @@ class Agent:
 
         self.oldStateVector = stateVector
         self.oldActionId = bestActionId
+        self.oldState = state
 
         action = getAction(state, bestActionId)
         self.sio.emit("action-{}".format(self.id), action)
