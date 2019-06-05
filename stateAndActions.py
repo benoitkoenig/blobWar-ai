@@ -3,8 +3,16 @@ import numpy as np
 
 distanceToKill = 0.04 / math.sqrt(2)
 
+def getFirstBlobIdAlive(state):
+    if (state["army"][0]["alive"]):
+        return 0
+    if (state["army"][1]["alive"]):
+        return 1
+    return 2
+
 def getStateVector(state):
-    blob = state["army"][0]
+    blobId = getFirstBlobIdAlive(state)
+    blob = state["army"][blobId]
     stateVector = [
         1.,
         float(blob["status"] == "normal"),
@@ -17,8 +25,8 @@ def getStateVector(state):
     return stateVector
 
 def getAction(state, bestActionId):
-    blob = state["army"][0]
-    blobId = 0
+    blobId = getFirstBlobIdAlive(state)
+    blob = state["army"][blobId]
     actions = [
         [
             {"type": "server/setDestination", "idBlob": blobId, "destination": {"x": blob["x"], "y": blob["y"]}},
