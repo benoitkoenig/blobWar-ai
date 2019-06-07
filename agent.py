@@ -42,6 +42,24 @@ class Agent:
                 return
         self.update(state)
 
+    def get_loss_computers(self, stateVector, reward):
+        def get_value_loss():
+            value = critic(self.oldStateVector)[0][0]
+            newValue = critic(stateVector)[0][0]
+            returnValue = reward + gamma * newValue
+            self.advantage = returnValue - value # save it for policy_loss
+
+            return self.advantage ** 2
+
+        def get_policy_loss():
+            # Warning: epsilon is not taken into account here. I dont know how it should be, though minimizing this loss should still work
+            logits = actor(self.oldStateVector)
+            policy_loss = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=[self.oldActionId], logits=logits)[0] # The loss assuming we took the right action
+            policy_loss = tf.multiply(tf.stop_gradient(self.advantage), policy_loss) # Multiply by advantage tells how much that action was right
+            return policy_loss
+
+        return get_value_loss, get_policy_loss
+
     def update(self, state):
         global actor, critic
 
@@ -54,32 +72,9 @@ class Agent:
 
         reward = determineReward(self.oldState, state)
         if (reward != None):
-            with tf.GradientTape(persistent=True) as tape:
-                value = critic(self.oldStateVector)[0][0]
-                newValue = critic(stateVector)[0][0]
-                delta = tf.stop_gradient(reward + gamma * newValue - value)
-                val = tf.multiply(-delta, value) # Using -delta instead of delta gets the right value, probly cause I use SGD but Sutton adds this value
-
-                logits = actor(self.oldStateVector)[0]
-                prob = tf.nn.softmax(logits)[self.oldActionId]
-                prob = tf.multiply(1 - epsilon, prob) + epsilon / ACTION_SIZE
-                const_prob = tf.stop_gradient(prob)
-                pr = tf.multiply(-delta / const_prob, prob)
-
-            newAliveAllies = sum(s["alive"] for s in state["army"])
-            newAliveEnemies = sum(s["alive"] for s in state["enemy"])
-            oldAliveAllies = sum(s["alive"] for s in self.oldState["army"])
-            oldAliveEnemies = sum(s["alive"] for s in self.oldState["enemy"])
-            alliesKilled = oldAliveAllies - newAliveAllies
-            enemiesKilled = oldAliveEnemies - newAliveEnemies
-            if ((alliesKilled == 0) & (enemiesKilled != 0)):
-                print(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> Proper kill")
-
-            gradCritic = tape.gradient(val, critic.trainable_weights)
-            gradActor = tape.gradient(pr, actor.trainable_weights)
-
-            optCritic.apply_gradients(zip(gradCritic, critic.trainable_weights))
-            optActor.apply_gradients(zip(gradActor, actor.trainable_weights))
+            get_value_loss, get_policy_loss = self.get_loss_computers(stateVector, reward) # calling them in the right order is important
+            optCritic.minimize(get_value_loss, var_list=critic.trainable_weights)
+            optActor.minimize(get_policy_loss, var_list=actor.trainable_weights)
 
             if (state["type"] == "endOfGame"):
                 actor.save_weights("weights/actor")
