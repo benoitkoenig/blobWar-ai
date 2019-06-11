@@ -9,7 +9,7 @@ def determineReward(state, newState):
     elif (newState["value"] == "Defeat"):
         end_bonus = 2
     elif (newState["value"] == "Timeout"):
-        end_bonus = -10
+        end_bonus = 0
     else:
         end_bonus = 4
 
@@ -19,7 +19,7 @@ def determineReward(state, newState):
     oldAliveEnemies = sum(s["alive"] for s in state["enemy"])
 
     if ((oldAliveAllies == newAliveAllies) & (oldAliveEnemies != newAliveEnemies)):
-        print(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> Proper kill")
+        print(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> Proper kill")
 
     alliesKilled = oldAliveAllies - newAliveAllies
     enemiesKilled = oldAliveEnemies - newAliveEnemies

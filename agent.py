@@ -10,7 +10,6 @@ from stateAndActions import getStateVector, getAction
 tf.enable_eager_execution()
 
 gamma = .9
-epsilon = .1
 
 optActor = tf.train.GradientDescentOptimizer(1e-3)
 optCritic = tf.train.GradientDescentOptimizer(1e-3)
@@ -48,15 +47,15 @@ class Agent:
             newValue = critic(stateVector)[0][0]
             returnValue = reward + gamma * newValue
             self.advantage = returnValue - value # save it for policy_loss
-
             return self.advantage ** 2
 
         def get_policy_loss():
-            # Warning: epsilon is not taken into account here. I dont know how it should be, though minimizing this loss should still work
             logits = actor(self.oldStateVector)
+            probs = tf.nn.softmax(logits[0])
             policy_loss = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=[self.oldActionId], logits=logits)[0] # The loss assuming we took the right action
             policy_loss = tf.multiply(tf.stop_gradient(self.advantage), policy_loss) # Multiply by advantage tells how much that action was right
-            return policy_loss
+            low_prob_advantage = tf.math.abs(tf.math.log(probs[self.oldActionId] * ACTION_SIZE)) # Helps even probabilities to favour exploration
+            return policy_loss + .01 * low_prob_advantage
 
         return get_value_loss, get_policy_loss
 
@@ -66,8 +65,7 @@ class Agent:
         stateVector = np.array(getStateVector(state))
         stateVector = tf.convert_to_tensor(np.reshape(stateVector, [1, STATE_SIZE]))
         logits = actor(stateVector)
-        probs = tf.nn.softmax(logits.numpy()[0])
-        probs = np.array([(1 - epsilon) * p + epsilon / ACTION_SIZE for p in probs])
+        probs = tf.nn.softmax(logits[0]).numpy()
         bestActionId = np.random.choice(ACTION_SIZE, p=probs)
 
         reward = determineReward(self.oldState, state)
