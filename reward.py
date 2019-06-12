@@ -19,7 +19,17 @@ def determineReward(state, newState):
     oldAliveEnemies = sum(s["alive"] for s in state["enemy"])
 
     if ((oldAliveAllies == newAliveAllies) & (oldAliveEnemies != newAliveEnemies)):
-        print(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> Proper kill")
+        deads = []
+        for i in [0, 1, 2]:
+            if (newState["enemy"][i]["alive"] == False) & (state["enemy"][i]["alive"] == True):
+                deads.append(i)
+        print(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> Proper kill {}".format(deads))
+    elif (oldAliveEnemies != newAliveEnemies):
+        deads = []
+        for i in [0, 1, 2]:
+            if (newState["enemy"][i]["alive"] == False) & (state["enemy"][i]["alive"] == True):
+                deads.append(i)
+        print("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< Kamikaze {}".format(deads))
 
     alliesKilled = oldAliveAllies - newAliveAllies
     enemiesKilled = oldAliveEnemies - newAliveEnemies

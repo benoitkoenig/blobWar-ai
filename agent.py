@@ -10,6 +10,8 @@ from stateAndActions import getStateVector, getAction
 tf.enable_eager_execution()
 
 gamma = .9
+epsilon = .1
+prob_flattener_factor = .05
 
 optActor = tf.train.GradientDescentOptimizer(1e-3)
 optCritic = tf.train.GradientDescentOptimizer(1e-3)
@@ -51,11 +53,18 @@ class Agent:
 
         def get_policy_loss():
             logits = actor(self.oldStateVector)
-            probs = tf.nn.softmax(logits[0])
-            policy_loss = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=[self.oldActionId], logits=logits)[0] # The loss assuming we took the right action
+            s = tf.reduce_sum(tf.math.exp(logits))
+            logits_with_epsilon = tf.map_fn(lambda l: tf.math.log((1 - epsilon) * tf.math.exp(l) + s * epsilon / ACTION_SIZE), logits)
+
+            policy_loss = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=[self.oldActionId], logits=logits_with_epsilon)[0] # The loss assuming we took the right action
             policy_loss = tf.multiply(tf.stop_gradient(self.advantage), policy_loss) # Multiply by advantage tells how much that action was right
-            low_prob_advantage = tf.math.abs(tf.math.log(probs[self.oldActionId] * ACTION_SIZE)) # Helps even probabilities to favour exploration
-            return policy_loss + .01 * low_prob_advantage
+
+            probs = tf.nn.softmax(logits[0])
+            low_prob_advantage = tf.math.abs(tf.math.log(probs[self.oldActionId] * ACTION_SIZE))
+            # The goal of low_prob_advantage is to give a very tiny advantage to actions with low probability,
+            # so that actions with the same consequences tend to the same probability
+
+            return policy_loss + prob_flattener_factor * low_prob_advantage
 
         return get_value_loss, get_policy_loss
 
@@ -66,6 +75,7 @@ class Agent:
         stateVector = tf.convert_to_tensor(np.reshape(stateVector, [1, STATE_SIZE]))
         logits = actor(stateVector)
         probs = tf.nn.softmax(logits[0]).numpy()
+        probs = [(1 - epsilon) * p + epsilon / ACTION_SIZE for p in probs]
         bestActionId = np.random.choice(ACTION_SIZE, p=probs)
 
         reward = determineReward(self.oldState, state)
