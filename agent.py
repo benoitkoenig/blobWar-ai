@@ -10,11 +10,11 @@ from stateAndActions import getStateVector, getAction
 tf.enable_eager_execution()
 
 gamma = .9
-epsilon = .1
-prob_flattener_factor = .05
+epsilon = .0001
+prob_flattener_factor = .001
 
-optActor = tf.train.GradientDescentOptimizer(1e-3)
-optCritic = tf.train.GradientDescentOptimizer(1e-3)
+optActor = tf.train.GradientDescentOptimizer(1e-4)
+optCritic = tf.train.GradientDescentOptimizer(1e-4)
 actor = ActorModel()
 critic = CriticModel()
 
