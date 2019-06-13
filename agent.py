@@ -56,8 +56,11 @@ class Agent:
         if (reward != None):
             with tf.GradientTape(persistent=True) as tape:
                 value = critic(self.oldStateVector)[0][0]
-                newValue = critic(stateVector)[0][0]
-                delta = tf.stop_gradient(reward + gamma * newValue - value)
+                returnValue = reward
+                if (state["type"] != "endOfGame"):
+                    newValue = critic(stateVector)[0][0]
+                    returnValue += gamma * newValue
+                delta = tf.stop_gradient(returnValue - value)
                 val = tf.multiply(-delta, value) # Using -delta instead of delta gets the right value, probly cause I use SGD but Sutton adds this value
 
                 logits = actor(self.oldStateVector)[0]
