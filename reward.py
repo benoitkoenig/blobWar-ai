@@ -9,7 +9,7 @@ def determineReward(state, newState):
     elif (newState["value"] == "Defeat"):
         end_bonus = 2
     elif (newState["value"] == "Timeout"):
-        end_bonus = 0
+        end_bonus = -10
     else:
         end_bonus = 4
 
