@@ -10,11 +10,11 @@ from stateAndActions import getStateVector, getAction
 tf.enable_eager_execution()
 
 gamma = .9
-epsilon = .0001
-prob_flattener_factor = .001
+epsilon = .1
+prob_flattener_factor = .01
 
-optActor = tf.train.GradientDescentOptimizer(1e-4)
-optCritic = tf.train.GradientDescentOptimizer(1e-4)
+optActor = tf.train.GradientDescentOptimizer(1e-3)
+optCritic = tf.train.GradientDescentOptimizer(1e-3)
 actor = ActorModel()
 critic = CriticModel()
 
@@ -32,10 +32,13 @@ class Agent:
         self.oldActionId = None
         self.oldState = None # Used only to calculate the reward
 
+        self.global_critic = critic
+        self.global_actor = actor
+
         self.local_critic = CriticModel()
         self.local_actor = ActorModel()
-        self.local_critic.set_weights(critic.get_weights())
-        self.local_actor.set_weights(actor.get_weights())
+        self.local_critic.set_weights(self.global_critic.get_weights())
+        self.local_actor.set_weights(self.global_actor.get_weights())
 
         self.grads_critic = []
         self.grads_actor = []
@@ -54,16 +57,16 @@ class Agent:
 
     def get_loss_computers(self, stateVector, reward, isFinalState):
         def get_value_loss():
-            value = critic(self.oldStateVector)[0][0]
+            value = self.local_critic(self.oldStateVector)[0][0]
             returnValue = reward
             if (isFinalState == False):
-                newValue = critic(stateVector)[0][0]
+                newValue = self.local_critic(stateVector)[0][0]
                 returnValue += gamma * newValue
             self.advantage = returnValue - value # save it for policy_loss
             return self.advantage ** 2
 
         def get_policy_loss():
-            logits = actor(self.oldStateVector)
+            logits = self.local_actor(self.oldStateVector)
             s = tf.reduce_sum(tf.math.exp(logits))
             logits_with_epsilon = tf.map_fn(lambda l: tf.math.log((1 - epsilon) * tf.math.exp(l) + s * epsilon / ACTION_SIZE), logits)
 
@@ -80,11 +83,9 @@ class Agent:
         return get_value_loss, get_policy_loss
 
     def update(self, state):
-        global actor, critic
-
         stateVector = np.array(getStateVector(state))
         stateVector = tf.convert_to_tensor(np.reshape(stateVector, [1, STATE_SIZE]))
-        logits = actor(stateVector)
+        logits = self.local_actor(stateVector)
         probs = tf.nn.softmax(logits[0]).numpy()
         probs = [(1 - epsilon) * p + epsilon / ACTION_SIZE for p in probs]
         bestActionId = np.random.choice(ACTION_SIZE, p=probs)
@@ -93,29 +94,30 @@ class Agent:
         if (reward != None):
             get_value_loss, get_policy_loss = self.get_loss_computers(stateVector, reward, (state["type"] == "endOfGame")) # calling them in the right order is important
 
-            grads_critic = optCritic.compute_gradients(get_value_loss, critic.trainable_weights)
-            grads_actor = optActor.compute_gradients(get_policy_loss, actor.trainable_weights)
+            grads_critic = optCritic.compute_gradients(get_value_loss, self.local_critic.trainable_weights)
+            grads_actor = optActor.compute_gradients(get_policy_loss, self.local_actor.trainable_weights)
 
             for i in range(len(grads_critic)):
-                grads_critic[i] = (grads_critic[i][0], critic.trainable_weights[i])
+                grads_critic[i] = (grads_critic[i][0], self.global_critic.trainable_weights[i])
             for i in range(len(grads_actor)):
-                grads_actor[i] = (grads_actor[i][0], actor.trainable_weights[i])
+                grads_actor[i] = (grads_actor[i][0], self.global_actor.trainable_weights[i])
 
             self.grads_critic += grads_critic
             self.grads_actor += grads_actor
 
-            if ((state["type"] == "endOfGame") | (self.t % 400 == 2)):
-                optCritic.apply_gradients(self.grads_critic)
-                optActor.apply_gradients(self.grads_actor)
-                self.grads_critic = []
-                self.grads_actor = []
-                self.local_critic.set_weights(critic.get_weights())
-                self.local_actor.set_weights(actor.get_weights())
+            if ((state["type"] == "endOfGame") | (self.t % 40 == 2)):
+                if (len(self.grads_critic) != 0) & (len(self.grads_actor) != 0):
+                    optCritic.apply_gradients(self.grads_critic)
+                    optActor.apply_gradients(self.grads_actor)
                 if (state["type"] == "endOfGame"):
-                    actor.save_weights("weights/actor")
-                    critic.save_weights("weights/critic")
+                    self.global_actor.save_weights("weights/actor")
+                    self.global_critic.save_weights("weights/critic")
                     print("End of game after {} episodes".format(self.t))
-
+                else:
+                    self.grads_critic = []
+                    self.grads_actor = []
+                    self.local_critic.set_weights(self.global_critic.get_weights())
+                    self.local_actor.set_weights(self.global_actor.get_weights())
         self.oldStateVector = stateVector
         self.oldActionId = bestActionId
         self.oldState = state
