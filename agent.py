@@ -31,6 +31,15 @@ class Agent:
         self.oldStateVector = None
         self.oldActionId = None
         self.oldState = None # Used only to calculate the reward
+
+        self.local_critic = CriticModel()
+        self.local_actor = ActorModel()
+        self.local_critic.set_weights(critic.get_weights())
+        self.local_actor.set_weights(actor.get_weights())
+
+        self.grads_critic = []
+        self.grads_actor = []
+
         sio.emit("learning_agent_created", {"id": id})
 
     def action(self, state):
@@ -81,13 +90,29 @@ class Agent:
         reward = determineReward(self.oldState, state)
         if (reward != None):
             get_value_loss, get_policy_loss = self.get_loss_computers(stateVector, reward) # calling them in the right order is important
-            optCritic.minimize(get_value_loss, var_list=critic.trainable_weights)
-            optActor.minimize(get_policy_loss, var_list=actor.trainable_weights)
 
-            if (state["type"] == "endOfGame"):
-                actor.save_weights("weights/actor")
-                critic.save_weights("weights/critic")
-                print("End of game after {} episodes".format(self.t))
+            grads_critic = optCritic.compute_gradients(get_value_loss, critic.trainable_weights)
+            grads_actor = optActor.compute_gradients(get_policy_loss, actor.trainable_weights)
+
+            for i in range(len(grads_critic)):
+                grads_critic[i] = (grads_critic[i][0], critic.trainable_weights[i])
+            for i in range(len(grads_actor)):
+                grads_actor[i] = (grads_actor[i][0], actor.trainable_weights[i])
+
+            self.grads_critic += grads_critic
+            self.grads_actor += grads_actor
+
+            if ((state["type"] == "endOfGame") | (self.t % 400 == 2)):
+                optCritic.apply_gradients(self.grads_critic)
+                optActor.apply_gradients(self.grads_actor)
+                self.grads_critic = []
+                self.grads_actor = []
+                self.local_critic.set_weights(critic.get_weights())
+                self.local_actor.set_weights(actor.get_weights())
+                if (state["type"] == "endOfGame"):
+                    actor.save_weights("weights/actor")
+                    critic.save_weights("weights/critic")
+                    print("End of game after {} episodes".format(self.t))
 
         self.oldStateVector = stateVector
         self.oldActionId = bestActionId
