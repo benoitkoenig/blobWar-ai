@@ -43,11 +43,13 @@ class Agent:
                 return
         self.update(state)
 
-    def get_loss_computers(self, stateVector, reward):
+    def get_loss_computers(self, stateVector, reward, isFinalState):
         def get_value_loss():
             value = critic(self.oldStateVector)[0][0]
-            newValue = critic(stateVector)[0][0]
-            returnValue = reward + gamma * newValue
+            returnValue = reward
+            if (isFinalState == False):
+                newValue = critic(stateVector)[0][0]
+                returnValue += gamma * newValue
             self.advantage = returnValue - value # save it for policy_loss
             return self.advantage ** 2
 
@@ -80,7 +82,7 @@ class Agent:
 
         reward = determineReward(self.oldState, state)
         if (reward != None):
-            get_value_loss, get_policy_loss = self.get_loss_computers(stateVector, reward) # calling them in the right order is important
+            get_value_loss, get_policy_loss = self.get_loss_computers(stateVector, reward, (state["type"] == "endOfGame")) # calling them in the right order is important
             optCritic.minimize(get_value_loss, var_list=critic.trainable_weights)
             optActor.minimize(get_policy_loss, var_list=actor.trainable_weights)
 
