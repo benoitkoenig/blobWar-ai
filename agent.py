@@ -31,6 +31,7 @@ class Agent:
         self.old_stateVector = None
         self.old_action_id = None
         self.old_state = None # Used only to calculate the reward
+        self.old_probs = None # Used only for tracking
 
         self.bot = bots[name]
 
@@ -114,7 +115,7 @@ class Agent:
             self.grads_critic += grads_critic
             self.grads_actor += grads_actor
 
-            save_step_data(self.id, self.step, probs, best_action_id, reward, (allies_killed == 0) & (enemies_killed != 0), (allies_killed != 0) & (enemies_killed != 0))
+            save_step_data(self.id, self.step - 1, self.old_probs, self.old_action_id, reward, (allies_killed == 0) & (enemies_killed != 0), (allies_killed != 0) & (enemies_killed != 0))
             if ((state["type"] == "endOfGame") | (self.step % update_interval == (update_interval - 1))):
                 grads_critic = self.bot.optimizer_critic.apply_gradients(self.grads_critic)
                 grads_actor = self.bot.optimizer_actor.apply_gradients(self.grads_actor)
@@ -130,6 +131,7 @@ class Agent:
         self.old_stateVector = stateVector
         self.old_action_id = best_action_id
         self.old_state = state
+        self.old_probs = probs
 
         action = getAction(state, best_action_id)
         self.sio.emit("action-{}".format(self.id), action)
