@@ -8,9 +8,9 @@ per_step_file_path = "data/per_step.csv"
 
 def reset_data():
     df = pd.DataFrame({}, columns=per_episode_columns)
-    df.to_csv(per_episode_file_path, header=True, index=True)
+    df.to_csv(per_episode_file_path, header=True, index=False)
     df = pd.DataFrame({}, columns=per_step_columns)
-    df.to_csv(per_step_file_path, header=True, index=True)
+    df.to_csv(per_step_file_path, header=True, index=False)
 
 def save_episode_data(agent_id, nb_steps, nb_proper_kills, nb_kamikaze, result):
     df = pd.DataFrame({
@@ -21,7 +21,7 @@ def save_episode_data(agent_id, nb_steps, nb_proper_kills, nb_kamikaze, result):
         "nb_kamikaze": [nb_kamikaze],
         "result": [result],
     }, columns=per_episode_columns)
-    df.to_csv(per_episode_file_path, mode="a", header=False, index=True, )
+    df.to_csv(per_episode_file_path, mode="a", header=False, index=False)
 
 def save_step_data(agent_id, step, probs, action_id, reward, proper_kill, kamikaze):
     df = pd.DataFrame({
@@ -34,9 +34,7 @@ def save_step_data(agent_id, step, probs, action_id, reward, proper_kill, kamika
         "proper_kill": [proper_kill],
         "kamikaze": [kamikaze],
     }, columns=per_step_columns)
-    df.to_csv(per_step_file_path, mode="a", header=False, index=True)
+    df.to_csv(per_step_file_path, mode="a", header=False, index=False)
 
-def set_tracking_start_marker():
-    df = pd.DataFrame({"agent_id": ["Starting the agent"]}, columns=["agent_id"])
-    df.to_csv(per_episode_file_path, mode="a", header=False, index=True)
-    df.to_csv(per_step_file_path, mode="a", header=False, index=True)
+def get_dataframes():
+    return pd.read_csv(per_step_file_path), pd.read_csv(per_episode_file_path)

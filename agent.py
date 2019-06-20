@@ -6,7 +6,7 @@ from bots import Bots, CriticModel, ActorModel
 from constants import ACTION_SIZE, STATE_SIZE
 from reward import determineReward, calc_kills
 from stateAndActions import getStateVector, getAction
-from tracking import save_episode_data, save_step_data, set_tracking_start_marker
+from tracking import save_episode_data, save_step_data
 
 tf.enable_eager_execution()
 
@@ -17,8 +17,6 @@ update_interval = 10
 
 bots = Bots()
 bots.load()
-
-set_tracking_start_marker()
 
 class Agent:
     def __init__(self, sio, id, name):
