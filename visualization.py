@@ -1,4 +1,6 @@
 import ast
+from datetime import datetime
+import matplotlib.dates as mdates
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -30,7 +32,7 @@ plt.subplot(2, 4, 3)
 plt.plot(nb_kamikaze)
 plt.title("Nb Kamikaze Per Game")
 
-ordered_results = np.array(["Timeout", "Defeat", "Draw", "Victory !"])
+ordered_results = np.array(["Timeout", "Defeat", "It's a draw", "Victory !"])
 result_value = df_per_episode["result"].map(lambda x: np.where(x == ordered_results)[0][0])
 plt.subplot(2, 4, 4)
 plt.plot(result_value)
@@ -52,18 +54,20 @@ df_per_step.tail(10000).apply(fill_highest_prob_per_kill_data, axis=1)
 plt.subplot(2, 4, 6)
 plt.violinplot(highest_prob_per_kill_data)
 plt.xticks([1, 2, 3], ["No Kill", "Kamikaze", "Proper Kill"])
-plt.title("Highest Prob Per Kill for 10000 last steps")
+plt.ylim(0., 1.)
+plt.title("Highest Prob Per Kill for tail(10000)")
 
 highest_prob_per_kill_data = [[], [], []]
 df_per_step.apply(fill_highest_prob_per_kill_data, axis=1)
 plt.subplot(2, 4, 7)
 plt.violinplot(highest_prob_per_kill_data)
 plt.xticks([1, 2, 3], ["No Kill", "Kamikaze", "Proper Kill"])
+plt.ylim(0., 1.)
 plt.title("Highest Prob Per Kill overall")
 
-highest_prob = df_per_step["reward"].values
+victories_date = df_per_episode[df_per_episode["result"] == "Victory !"]["datetime"].map(lambda x: datetime.strptime(x, '%Y-%m-%d %H:%M:%S.%f'))
 plt.subplot(2, 4, 8)
-plt.plot(highest_prob)
-plt.title("Reward Per Step")
+plt.hist(victories_date, bins=24)
+plt.title("Victories per time unit")
 
 plt.show()
