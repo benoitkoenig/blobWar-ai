@@ -2,10 +2,11 @@ import numpy as np
 import tensorflow as tf
 from tensorflow.train import GradientDescentOptimizer
 
-from constants import ACTION_SIZE, STATE_SIZE
 from bots import Bots, CriticModel, ActorModel
-from reward import determineReward
+from constants import ACTION_SIZE, STATE_SIZE
+from reward import determineReward, calc_kills
 from stateAndActions import getStateVector, getAction
+from tracking import save_episode_data, save_step_data, set_tracking_start_marker
 
 tf.enable_eager_execution()
 
@@ -17,15 +18,19 @@ update_interval = 10
 bots = Bots()
 bots.load()
 
+set_tracking_start_marker()
+
 class Agent:
     def __init__(self, sio, id, name):
         self.sio = sio
         self.id = id
         self.t = 0
         self.step = 0
-        self.oldStateVector = None
-        self.oldActionId = None
-        self.oldState = None # Used only to calculate the reward
+        self.nb_proper_kills = 0
+        self.nb_kamikaze = 0
+        self.old_stateVector = None
+        self.old_action_id = None
+        self.old_state = None # Used only to calculate the reward
 
         self.bot = bots[name]
 
@@ -54,7 +59,7 @@ class Agent:
 
     def get_loss_computers(self, stateVector, reward, isFinalState):
         def get_value_loss():
-            value = self.local_critic(self.oldStateVector)[0][0]
+            value = self.local_critic(self.old_stateVector)[0][0]
             returnValue = reward
             if (isFinalState == False):
                 newValue = self.local_critic(stateVector)[0][0]
@@ -63,15 +68,15 @@ class Agent:
             return self.advantage ** 2
 
         def get_policy_loss():
-            logits = self.local_actor(self.oldStateVector)
+            logits = self.local_actor(self.old_stateVector)
             s = tf.reduce_sum(tf.math.exp(logits))
             logits_with_epsilon = tf.map_fn(lambda l: tf.math.log((1 - epsilon) * tf.math.exp(l) + s * epsilon / ACTION_SIZE), logits)
 
-            policy_loss = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=[self.oldActionId], logits=logits_with_epsilon)[0] # The loss assuming we took the right action
+            policy_loss = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=[self.old_action_id], logits=logits_with_epsilon)[0] # The loss assuming we took the right action
             policy_loss = tf.multiply(tf.stop_gradient(self.advantage), policy_loss) # Multiply by advantage tells how much that action was right
 
             probs = tf.nn.softmax(logits[0])
-            low_prob_advantage = tf.math.abs(tf.math.log(probs[self.oldActionId] * ACTION_SIZE))
+            low_prob_advantage = tf.math.abs(tf.math.log(probs[self.old_action_id] * ACTION_SIZE))
             # The goal of low_prob_advantage is to give a very tiny advantage to actions with low probability,
             # so that actions with the same consequences tend to the same probability
             # I have seen entropy being used similar to this, probably has a similar output
@@ -86,10 +91,16 @@ class Agent:
         logits = self.local_actor(stateVector)
         probs = tf.nn.softmax(logits[0]).numpy()
         probs = [(1 - epsilon) * p + epsilon / ACTION_SIZE for p in probs]
-        bestActionId = np.random.choice(ACTION_SIZE, p=probs)
+        best_action_id = np.random.choice(ACTION_SIZE, p=probs)
 
-        reward = determineReward(self.oldState, state)
+        reward = determineReward(self.old_state, state)
         if (reward != None):
+            allies_killed, enemies_killed = calc_kills(self.old_state, state)
+            if (allies_killed == 0) & (enemies_killed != 0):
+                self.nb_proper_kills += 1
+            elif (enemies_killed != 0):
+                self.nb_kamikaze += 1
+
             get_value_loss, get_policy_loss = self.get_loss_computers(stateVector, reward, (state["type"] == "endOfGame")) # calling them in the right order is important
 
             grads_critic = self.bot.optimizer_critic.compute_gradients(get_value_loss, self.local_critic.trainable_weights)
@@ -103,21 +114,22 @@ class Agent:
             self.grads_critic += grads_critic
             self.grads_actor += grads_actor
 
+            save_step_data(self.id, self.step, probs, best_action_id, reward, (allies_killed == 0) & (enemies_killed != 0), (allies_killed != 0) & (enemies_killed != 0))
             if ((state["type"] == "endOfGame") | (self.step % update_interval == (update_interval - 1))):
                 grads_critic = self.bot.optimizer_critic.apply_gradients(self.grads_critic)
                 grads_actor = self.bot.optimizer_actor.apply_gradients(self.grads_actor)
                 if (state["type"] == "endOfGame"):
+                    save_episode_data(self.id, self.step, self.nb_proper_kills, self.nb_kamikaze, state["value"])
                     self.bot.save()
-                    print("End of game after {} steps".format(self.step))
                 else:
                     self.grads_critic = []
                     self.grads_actor = []
                     self.local_critic.set_weights(self.bot.critic.get_weights())
                     self.local_actor.set_weights(self.bot.actor.get_weights())
 
-        self.oldStateVector = stateVector
-        self.oldActionId = bestActionId
-        self.oldState = state
+        self.old_stateVector = stateVector
+        self.old_action_id = best_action_id
+        self.old_state = state
 
-        action = getAction(state, bestActionId)
+        action = getAction(state, best_action_id)
         self.sio.emit("action-{}".format(self.id), action)

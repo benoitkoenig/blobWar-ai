@@ -1,40 +1,27 @@
-def determineReward(state, newState):
-    if (state == None):
-        return None
-
-    if (newState["type"] != "endOfGame"):
-        end_bonus = 0
-    elif (newState["value"] == "Victory !"):
-        end_bonus = 5
-    elif (newState["value"] == "Defeat"):
-        end_bonus = 2
-    elif (newState["value"] == "Timeout"):
-        end_bonus = -10
-    else:
-        end_bonus = 4
-
-    newAliveAllies = sum(s["alive"] for s in newState["army"])
-    newAliveEnemies = sum(s["alive"] for s in newState["enemy"])
+def calc_kills(state, new_state):
+    newAliveAllies = sum(s["alive"] for s in new_state["army"])
+    newAliveEnemies = sum(s["alive"] for s in new_state["enemy"])
     oldAliveAllies = sum(s["alive"] for s in state["army"])
     oldAliveEnemies = sum(s["alive"] for s in state["enemy"])
 
-    if ((oldAliveAllies == newAliveAllies) & (oldAliveEnemies != newAliveEnemies)):
-        deads = []
-        for i in [0, 1, 2]:
-            if (newState["enemy"][i]["alive"] == False) & (state["enemy"][i]["alive"] == True):
-                deads.append(i)
-        print(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> Proper kill {}".format(deads))
-    elif (oldAliveEnemies != newAliveEnemies):
-        deads = []
-        for i in [0, 1, 2]:
-            if (newState["enemy"][i]["alive"] == False) & (state["enemy"][i]["alive"] == True):
-                deads.append(i)
-        print("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< Kamikaze {}".format(deads))
+    return oldAliveAllies - newAliveAllies, oldAliveEnemies - newAliveEnemies
 
-    alliesKilled = oldAliveAllies - newAliveAllies
-    enemiesKilled = oldAliveEnemies - newAliveEnemies
+def calc_end_bonus(new_state):
+    if (new_state["type"] != "endOfGame"):
+        return 0
+    if (new_state["value"] == "Victory !"):
+        return 5
+    if (new_state["value"] == "Defeat"):
+        return 2
+    if (new_state["value"] == "Timeout"):
+        return -10
+    return 4
 
-    card0used = (state["cards"][0] == True) & (newState["cards"][0] == False)
-    card1used = (state["cards"][1] == True) & (newState["cards"][1] == False)
+def determineReward(state, new_state):
+    if (state == None):
+        return None
 
-    return enemiesKilled * 20 - alliesKilled * 18 - 1 - 3 * (card0used + card1used) + end_bonus
+    alliesKilled, enemiesKilled = calc_kills(state, new_state)
+    end_bonus = calc_end_bonus(new_state)
+
+    return enemiesKilled * 20 - alliesKilled * 18 - 1 + end_bonus
