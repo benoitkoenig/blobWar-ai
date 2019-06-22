@@ -4,6 +4,7 @@ import matplotlib.dates as mdates
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+import sys
 
 from constants import ACTION_SIZE
 from tracking import get_dataframes
@@ -44,10 +45,20 @@ def get_highest_prob_per_kill_data(df):
 
 df_per_step, df_per_episode = get_dataframes()
 df_per_step["highest_prob"] = df_per_step["probs"].map(lambda x: np.max(ast.literal_eval(x)))
-df_per_step_tail = df_per_step.tail(10000)
 
-first_date = datetime.strptime(df_per_episode["datetime"][0], '%Y-%m-%d %H:%M:%S.%f')
+first_date = datetime.strptime(df_per_episode["datetime"].loc[0], '%Y-%m-%d %H:%M:%S.%f')
 last_date = datetime.strptime(df_per_episode["datetime"][df_per_episode.shape[0]-1], '%Y-%m-%d %H:%M:%S.%f')
+
+for instruction in sys.argv:
+    details = instruction.split("=")
+    if (len(details) == 2):
+        if (details[0] == "--bot"):
+            print("Showing only {}".format(details[1]))
+            df_per_step = df_per_step[df_per_step["name"] == details[1]]
+            df_per_episode = df_per_episode[df_per_episode["name"] == details[1]]
+
+df_per_step_tail = df_per_step.tail(10000)
+df_per_step_pre_tail = df_per_step.tail(110000).head(100000)
 
 ############
 # Plotting #
@@ -82,21 +93,21 @@ plt.gca().xaxis.set_major_locator(mdates.AutoDateLocator(maxticks=5))
 plt.xlim(first_date, last_date)
 plt.title("Nb Proper Kills Per Time")
 
-# Scatter plot of rewards obtaining by action id
+# Scatter plot of rewards obtaining by action id (pretail)
 plt.subplot(3, 3, 4)
-x, y, c = get_color_density(df_per_step)
+x, y, c = get_color_density(df_per_step_pre_tail)
 plt.scatter(x, y, c=c, cmap="viridis")
-plt.ylim(-12, 45)
+plt.ylim(-22, 45)
 plt.xticks(range(ACTION_SIZE))
-plt.title("Log Count Reward Per Action Id - Overall")
+plt.title("Log Count Reward Per Action Id - Pre-Tail")
 
 # Scatter plot of rewards obtaining by action id (tailed)
 plt.subplot(3, 3, 5)
 x, y, c = get_color_density(df_per_step_tail)
 plt.scatter(x, y, c=c, cmap="viridis")
-plt.ylim(-12, 45)
+plt.ylim(-22, 45)
 plt.xticks(range(ACTION_SIZE))
-plt.title("Log Count Reward Per Action Id - Tail(10000)")
+plt.title("Log Count Reward Per Action Id - Tail")
 
 # Number of kamikaze per time
 plt.subplot(3, 3, 6)
@@ -108,21 +119,21 @@ plt.xlim(first_date, last_date)
 plt.legend()
 plt.title("Nb Kamikaze Per Time")
 
-# Density of highest probability per step ordered by kill status
+# Density of highest probability per step ordered by kill status (pretail)
 plt.subplot(3, 3, 7)
-highest_prob_per_kill_data = get_highest_prob_per_kill_data(df_per_step)
+highest_prob_per_kill_data = get_highest_prob_per_kill_data(df_per_step_pre_tail)
 plt.violinplot(highest_prob_per_kill_data)
 plt.xticks([1, 2, 3], ["No Kill", "Kamikaze", "Proper Kill"])
 plt.ylim(0., 1.)
-plt.title("Highest Prob Per Kill - Overall")
+plt.title("Highest Prob Per Kill - Pre-Tail")
 
-# Density of highest probability per step ordered by kill status (tailed)
+# Density of highest probability per step ordered by kill status (tail)
 plt.subplot(3, 3, 8)
 highest_prob_per_kill_data = get_highest_prob_per_kill_data(df_per_step_tail)
 plt.violinplot(highest_prob_per_kill_data)
 plt.xticks([1, 2, 3], ["No Kill", "Kamikaze", "Proper Kill"])
 plt.ylim(0., 1.)
-plt.title("Highest Prob Per Kill - Tail(10000)")
+plt.title("Highest Prob Per Kill - Tail")
 
 # Highest probability per step
 plt.subplot(3, 3, 9)

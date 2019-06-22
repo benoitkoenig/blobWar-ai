@@ -17,11 +17,20 @@ def calc_end_bonus(new_state):
         return -10
     return 4
 
-def determineReward(state, new_state):
+# Pb: counting this leads to a single action getting the top probability (probly bc advantage is then always > 0)
+def forbidden_move(state, new_state, action_id):
+    if (state["cards"][0] == False) & (action_id % 3 == 1):
+        return 1
+    if (state["cards"][1] == False) & (action_id % 3 == 2):
+        return 1
+    return 0
+
+def determineReward(state, new_state, action_id):
     if (state == None):
         return None
 
     alliesKilled, enemiesKilled = calc_kills(state, new_state)
     end_bonus = calc_end_bonus(new_state)
+    # forbidden = forbidden_move(state, new_state, action_id)
 
     return enemiesKilled * 20 - alliesKilled * 18 - 1 + end_bonus

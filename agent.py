@@ -23,6 +23,7 @@ class Agent:
         self.sio = sio
         self.id = id
         self.t = 0
+        self.name = name
         self.step = 0
         self.nb_proper_kills = 0
         self.nb_kamikaze = 0
@@ -85,14 +86,14 @@ class Agent:
         return get_value_loss, get_policy_loss
 
     def update(self, state):
-        stateVector = np.array(getStateVector(state))
+        stateVector = np.array(getStateVector(state, self.name))
         stateVector = tf.convert_to_tensor(np.reshape(stateVector, [1, STATE_SIZE]))
         logits = self.local_actor(stateVector)
         probs = tf.nn.softmax(logits[0]).numpy()
         probs = [(1 - epsilon) * p + epsilon / ACTION_SIZE for p in probs]
         best_action_id = np.random.choice(ACTION_SIZE, p=probs)
 
-        reward = determineReward(self.old_state, state)
+        reward = determineReward(self.old_state, state, self.old_action_id)
         if (reward != None):
             allies_killed, enemies_killed = calc_kills(self.old_state, state)
             if (allies_killed == 0) & (enemies_killed != 0):
@@ -113,12 +114,12 @@ class Agent:
             self.grads_critic += grads_critic
             self.grads_actor += grads_actor
 
-            save_step_data(self.id, self.step - 1, self.old_probs, self.old_action_id, reward, (allies_killed == 0) & (enemies_killed != 0), (allies_killed != 0) & (enemies_killed != 0))
+            save_step_data(self.id, self.name, self.step - 1, self.old_probs, self.old_action_id, reward, (allies_killed == 0) & (enemies_killed != 0), (allies_killed != 0) & (enemies_killed != 0))
             if ((state["type"] == "endOfGame") | (self.step % update_interval == (update_interval - 1))):
                 grads_critic = self.bot.optimizer_critic.apply_gradients(self.grads_critic)
                 grads_actor = self.bot.optimizer_actor.apply_gradients(self.grads_actor)
                 if (state["type"] == "endOfGame"):
-                    save_episode_data(self.id, self.step, self.nb_proper_kills, self.nb_kamikaze, state["value"])
+                    save_episode_data(self.id, self.name, self.step, self.nb_proper_kills, self.nb_kamikaze, state["value"])
                     self.bot.save()
                 else:
                     self.grads_critic = []
