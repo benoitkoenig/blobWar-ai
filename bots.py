@@ -31,8 +31,8 @@ class CriticModel(Model):
 
 class Bot():
     def __init__(self, name):
-        self.optimizer_actor = tf.train.GradientDescentOptimizer(1e-3)
-        self.optimizer_critic = tf.train.GradientDescentOptimizer(1e-3)
+        self.optimizer_actor = tf.train.AdamOptimizer(1e-3)
+        self.optimizer_critic = tf.train.AdamOptimizer(1e-3)
         self.actor = ActorModel()
         self.critic = CriticModel()
 

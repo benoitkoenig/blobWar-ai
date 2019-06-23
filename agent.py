@@ -11,8 +11,8 @@ from tracking import save_episode_data, save_step_data
 tf.enable_eager_execution()
 
 gamma = .9
-epsilon = .1
-prob_flattener_factor = .01
+epsilon = .005
+prob_flattener_factor = .02
 update_interval = 10
 
 bots = Bots()
@@ -76,10 +76,11 @@ class Agent:
             policy_loss = tf.multiply(tf.stop_gradient(self.advantage), policy_loss) # Multiply by advantage tells how much that action was right
 
             probs = tf.nn.softmax(logits[0])
-            low_prob_advantage = tf.math.abs(tf.math.log(probs[self.old_action_id] * ACTION_SIZE))
+            log_p = tf.map_fn(lambda p: tf.math.abs(tf.math.log(p * ACTION_SIZE)), probs)
+            low_prob_advantage = tf.reduce_sum(log_p)
             # The goal of low_prob_advantage is to give a very tiny advantage to actions with low probability,
             # so that actions with the same consequences tend to the same probability
-            # I have seen entropy being used similar to this, probably has a similar output
+            # I have seen cross-entropy being used a similar way, but with my own solution I see better what happens
 
             return policy_loss + prob_flattener_factor * low_prob_advantage
 
