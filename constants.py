@@ -1,11 +1,12 @@
 import math
 
-STATE_SIZE = 54
-ACTION_SIZE = 27
+STATE_SIZE = 89
+ACTION_SIZE = 55
 
+step_size = 4
 gamma = .9
 epsilon = .1
-prob_flattener_factor = .002
+prob_flattener_factor = .005
 update_interval = 10
 learning_rate_actor = 1e-3
 learning_rate_critic = 1e-3

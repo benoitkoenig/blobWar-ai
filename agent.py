@@ -3,7 +3,7 @@ import tensorflow as tf
 
 from actions import get_action
 from bots import Bots, CriticModel, ActorModel
-from constants import ACTION_SIZE, STATE_SIZE, gamma, epsilon, prob_flattener_factor, update_interval
+from constants import ACTION_SIZE, STATE_SIZE, step_size, gamma, epsilon, prob_flattener_factor, update_interval
 from reward import determine_reward, calc_kills
 from state import get_state_vector
 from tracking import save_episode_data, save_step_data
@@ -46,10 +46,10 @@ class Agent:
             return # The bot does not need this signal
         if (state["type"] == "update"):
             self.t += 1
-            if (self.t % 8 != 2): # 2 because arbitrary kills may happen at t=1 on exploratory starts
+            if (self.t == 1) | (self.t % step_size != 0): # self.t < 2 because arbitrary kills may happen at t=1 on exploratory starts
                 self.sio.emit("action-{}".format(self.id), [])
                 return
-            self.step = int((self.t - 2) / 8)
+            self.step = int((self.t - 2) / step_size)
         self.update(state)
 
     def get_loss_computers(self, state_vector, reward, isFinalState):

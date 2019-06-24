@@ -10,23 +10,27 @@ from constants import STATE_SIZE, ACTION_SIZE, learning_rate_actor, learning_rat
 class ActorModel(Model):
     def __init__(self):
         super(ActorModel, self).__init__()
-        self.dense = Dense(128, activation='relu')
+        self.dense1 = Dense(256, activation='relu')
+        self.dense2 = Dense(256, activation='relu')
         self.policy_logits = Dense(ACTION_SIZE)
 
     def call(self, inputs):
-        x = self.dense(inputs)
+        x = self.dense1(inputs)
+        x = self.dense2(x)
         logits = self.policy_logits(x)
         return logits
 
 class CriticModel(Model):
     def __init__(self):
         super(CriticModel, self).__init__()
-        self.dense = Dense(128, activation='relu')
+        self.dense1 = Dense(256, activation='relu')
+        self.dense2 = Dense(256, activation='relu')
         self.values = Dense(1)
 
     def call(self, inputs):
-        v1 = self.dense(inputs)
-        values = self.values(v1)
+        x = self.dense1(inputs)
+        x = self.dense2(x)
+        values = self.values(x)
         return values
 
 class Bot():

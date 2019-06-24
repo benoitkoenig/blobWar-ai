@@ -1,3 +1,5 @@
+from actions import get_action_data
+
 def calc_kills(state, new_state):
     newAliveAllies = sum(s["alive"] for s in new_state["army"])
     newAliveEnemies = sum(s["alive"] for s in new_state["enemy"])
@@ -17,11 +19,15 @@ def calc_end_bonus(new_state):
         return -10
     return 4
 
-def forbidden_move(state, new_state, action_id):
-    if (state["cards"][0] == False) & (action_id % 3 == 1):
+def forbidden_move(state, action_id):
+    id_blob, _, _, id_card = get_action_data(action_id)
+    if id_blob == None:
+        return 0
+    if (state["army"][id_blob]["alive"] == False):
         return 1
-    if (state["cards"][1] == False) & (action_id % 3 == 2):
-        return 1
+    if (id_card != None):
+        if state["cards"][id_card] == False:
+            return 1
     return 0
 
 def determine_reward(state, new_state, action_id):
@@ -30,6 +36,6 @@ def determine_reward(state, new_state, action_id):
 
     alliesKilled, enemiesKilled = calc_kills(state, new_state)
     end_bonus = calc_end_bonus(new_state)
-    forbidden = forbidden_move(state, new_state, action_id)
+    forbidden = forbidden_move(state, action_id)
 
     return enemiesKilled * 20 - alliesKilled * 18 - 1 + end_bonus - 10 * forbidden
