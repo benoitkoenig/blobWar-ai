@@ -3,14 +3,14 @@ import tensorflow as tf
 from tensorflow.keras import Model
 from tensorflow.keras.layers import Dense
 
-from constants import STATE_SIZE, ACTION_SIZE, learning_rate_actor, learning_rate_critic
+from constants import STATE_SIZE, ACTION_SIZE, learning_rate_actor, learning_rate_critic, names
 
 # Extending Model is overkill as a Sequential would be enough
 
 class ActorModel(Model):
     def __init__(self):
         super(ActorModel, self).__init__()
-        self.dense = Dense(64, activation='relu')
+        self.dense = Dense(128, activation='relu')
         self.policy_logits = Dense(ACTION_SIZE)
 
     def call(self, inputs):
@@ -21,7 +21,7 @@ class ActorModel(Model):
 class CriticModel(Model):
     def __init__(self):
         super(CriticModel, self).__init__()
-        self.dense = Dense(64, activation='relu')
+        self.dense = Dense(128, activation='relu')
         self.values = Dense(1)
 
     def call(self, inputs):
@@ -50,8 +50,7 @@ class Bot():
 
 class Bots(dict):
     def __init__(self):
-        self.names = ["RBotGhostBloc", "RBotDashDash"]
-        for name in self.names:
+        for name in names:
             self[name] = Bot(name)
 
     def load(self):

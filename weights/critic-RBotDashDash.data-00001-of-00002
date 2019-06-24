@@ -1,0 +1,21 @@
+³¢²–
+
+	dense
+
+values
+
+
+kernel
+bias
+
+
+kernel
+bias
+ZX
+VARIABLE_VALUEcritic_model_1/dense_6/kernel'dense/kernel/.ATTRIBUTES/VARIABLE_VALUE
+VT
+VARIABLE_VALUEcritic_model_1/dense_6/bias%dense/bias/.ATTRIBUTES/VARIABLE_VALUE
+[Y
+VARIABLE_VALUEcritic_model_1/dense_7/kernel(values/kernel/.ATTRIBUTES/VARIABLE_VALUE
+WU
+VARIABLE_VALUEcritic_model_1/dense_7/bias&values/bias/.ATTRIBUTES/VARIABLE_VALUE

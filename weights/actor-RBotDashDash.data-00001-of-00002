@@ -1,0 +1,20 @@
+ÄÜÈ§Ÿ
+
+	dense
+policy_logits
+
+
+kernel
+bias
+
+
+kernel
+bias
+YW
+VARIABLE_VALUEactor_model_1/dense_4/kernel'dense/kernel/.ATTRIBUTES/VARIABLE_VALUE
+US
+VARIABLE_VALUEactor_model_1/dense_4/bias%dense/bias/.ATTRIBUTES/VARIABLE_VALUE
+a_
+VARIABLE_VALUEactor_model_1/dense_5/kernel/policy_logits/kernel/.ATTRIBUTES/VARIABLE_VALUE
+][
+VARIABLE_VALUEactor_model_1/dense_5/bias-policy_logits/bias/.ATTRIBUTES/VARIABLE_VALUE

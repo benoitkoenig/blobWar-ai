@@ -6,10 +6,22 @@ import numpy as np
 import pandas as pd
 import sys
 
-from constants import ACTION_SIZE
+from constants import ACTION_SIZE, names
 from tracking import get_dataframes
 
 pd.plotting.register_matplotlib_converters()
+
+bot_name = None
+for instruction in sys.argv:
+    details = instruction.split("=")
+    if (len(details) == 2):
+        if (details[0] == "--bot"):
+            if details[1] not in names:
+                print("Invalid bot name. The name must be one of: {}".format(names))
+                sys.exit()
+            else:
+                print("Bot selected: {}".format(details[1]))
+                bot_name = details[1]
 
 ###############################
 # Methods for data formatting #
@@ -49,13 +61,9 @@ df_per_step["highest_prob"] = df_per_step["probs"].map(lambda x: np.max(ast.lite
 first_date = datetime.strptime(df_per_episode["datetime"].loc[0], '%Y-%m-%d %H:%M:%S.%f')
 last_date = datetime.strptime(df_per_episode["datetime"][df_per_episode.shape[0]-1], '%Y-%m-%d %H:%M:%S.%f')
 
-for instruction in sys.argv:
-    details = instruction.split("=")
-    if (len(details) == 2):
-        if (details[0] == "--bot"):
-            print("Showing only {}".format(details[1]))
-            df_per_step = df_per_step[df_per_step["name"] == details[1]]
-            df_per_episode = df_per_episode[df_per_episode["name"] == details[1]]
+if bot_name != None:
+    df_per_step = df_per_step[df_per_step["name"] == bot_name]
+    df_per_episode = df_per_episode[df_per_episode["name"] == bot_name]
 
 df_per_step_tail = df_per_step.tail(10000)
 df_per_step_pre_tail = df_per_step.tail(110000).head(100000)

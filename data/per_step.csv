@@ -1,1 +1,1 @@
-,datetime,agent_id,step,probs,action_id,reward,proper_kill,kamikaze
+datetime,agent_id,name,step,probs,action_id,reward,proper_kill,kamikaze
