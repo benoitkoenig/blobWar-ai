@@ -3,7 +3,7 @@ import tensorflow as tf
 from tensorflow.keras import Model
 from tensorflow.keras.layers import Dense
 
-from constants import STATE_SIZE, ACTION_SIZE
+from constants import STATE_SIZE, ACTION_SIZE, learning_rate_actor, learning_rate_critic
 
 # Extending Model is overkill as a Sequential would be enough
 
@@ -31,8 +31,8 @@ class CriticModel(Model):
 
 class Bot():
     def __init__(self, name):
-        self.optimizer_actor = tf.train.AdamOptimizer(1e-3)
-        self.optimizer_critic = tf.train.AdamOptimizer(1e-3)
+        self.optimizer_actor = tf.train.AdamOptimizer(learning_rate_actor)
+        self.optimizer_critic = tf.train.AdamOptimizer(learning_rate_critic)
         self.actor = ActorModel()
         self.critic = CriticModel()
 

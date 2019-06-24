@@ -3,17 +3,12 @@ import tensorflow as tf
 from tensorflow.train import GradientDescentOptimizer
 
 from bots import Bots, CriticModel, ActorModel
-from constants import ACTION_SIZE, STATE_SIZE
+from constants import ACTION_SIZE, STATE_SIZE, gamma, epsilon, prob_flattener_factor, update_interval
 from reward import determine_reward, calc_kills
 from stateAndActions import get_state_vector, get_action
 from tracking import save_episode_data, save_step_data
 
 tf.enable_eager_execution()
-
-gamma = .9
-epsilon = .005
-prob_flattener_factor = .02
-update_interval = 10
 
 bots = Bots()
 bots.load()
