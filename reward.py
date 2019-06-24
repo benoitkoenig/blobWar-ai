@@ -24,7 +24,7 @@ def forbidden_move(state, new_state, action_id):
         return 1
     return 0
 
-def determineReward(state, new_state, action_id):
+def determine_reward(state, new_state, action_id):
     if (state == None):
         return None
 
