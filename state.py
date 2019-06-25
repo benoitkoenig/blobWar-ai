@@ -26,11 +26,14 @@ def get_distance(b1, b2):
 def get_state_vector(state, name):
     state_vector = [
         1,
-        int(state["cards"][0]),
-        int(state["cards"][1]),
-        int(state["enemyCards"][0]),
-        int(state["enemyCards"][1]),
+        int(state["cards"]["availability"][0]),
+        int(state["cards"]["availability"][1]),
     ]
+    for i in range(3):
+        state_vector += [
+            int(state["cards"]["currentBlob"][0] == i),
+            int(state["cards"]["currentBlob"][1] == i),
+        ]
     all_blobs = (state["army"] + state["enemy"])
     for blob in all_blobs:
         state_vector += [
@@ -42,13 +45,20 @@ def get_state_vector(state, name):
             blob["y"],
         ]
     for i in range(len(all_blobs)):
-        for k in range(len(all_blobs) - i - 1):
-            j = i + k + 1
+        for j in range(i):
             b1 = all_blobs[i]
             b2 = all_blobs[j]
-            distance = get_distance(b1, b2)
-            angle = get_angle(b1, b2)
-            state_vector += [distance, angle]
+            state_vector += [
+                get_distance(b1, b2),
+                get_angle(b1, b2),
+            ]
+            for k in range(j):
+                combinations = [[i, j, k], [j, k, i], [k, i, j]]
+                for c in combinations:
+                    b1 = all_blobs[c[0]]
+                    b2 = all_blobs[c[1]]
+                    b3 = all_blobs[c[2]]
+                    state_vector.append(get_angle(b1, b2) - get_angle(b1, b3))
     for blob in state["army"]:
         if (blob["destination"] == None):
             destination_vector = [0, 0]

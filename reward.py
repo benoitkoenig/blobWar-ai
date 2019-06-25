@@ -26,7 +26,7 @@ def forbidden_move(state, action_id):
     if (state["army"][id_blob]["alive"] == False):
         return 1
     if (id_card != None):
-        if state["cards"][id_card] == False:
+        if state["cards"]["availability"][id_card] == False:
             return 1
     return 0
 

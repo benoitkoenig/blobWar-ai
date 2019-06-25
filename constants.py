@@ -1,6 +1,6 @@
 import math
 
-STATE_SIZE = 89
+STATE_SIZE = 153
 ACTION_SIZE = 55
 
 step_size = 4
