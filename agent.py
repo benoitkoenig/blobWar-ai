@@ -39,7 +39,7 @@ class Agent:
         self.grads_critic = []
         self.grads_actor = []
 
-        sio.emit("learning_agent_created", {"id": id})
+        sio.emit("learning_agent_created-{}".format(id))
 
     def action(self, state):
         if (state["type"] == "gameStarted"):
