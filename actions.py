@@ -33,11 +33,6 @@ def get_action(state, best_action_id):
     base_norm = np.linalg.norm(base_vector)
     if base_norm != 0:
         base_vector = base_vector / np.linalg.norm(base_vector) * 2
-    other_vectors = [
-        -base_vector,
-        [base_vector[1], -base_vector[0]],
-        [-base_vector[1], base_vector[0]],
-    ]
     destination = {"x": blob["x"] + base_vector[0], "y": blob["y"] + base_vector[1]}
     actions = [
         [
@@ -51,6 +46,11 @@ def get_action(state, best_action_id):
             {"type": "server/setDestination", "idBlob": id_blob, "destination": destination},
             {"type": "server/triggerCard", "idBlob": id_blob, "destination": destination, "idCard": 1},
         ],
+    ]
+    other_vectors = [
+        -base_vector,
+        [base_vector[1], -base_vector[0]],
+        [-base_vector[1], base_vector[0]],
     ]
     for v in other_vectors:
         destination = {"x": blob["x"] + v[0], "y": blob["y"] + v[1]}
