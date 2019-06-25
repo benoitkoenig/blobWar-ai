@@ -1,12 +1,12 @@
 from actions import get_action_data
 
 def calc_kills(state, new_state):
-    newAliveAllies = sum(s["alive"] for s in new_state["army"])
-    newAliveEnemies = sum(s["alive"] for s in new_state["enemy"])
-    oldAliveAllies = sum(s["alive"] for s in state["army"])
-    oldAliveEnemies = sum(s["alive"] for s in state["enemy"])
+    new_alive_allies = sum(s["alive"] for s in new_state["army"])
+    new_alive_enemies = sum(s["alive"] for s in new_state["enemy"])
+    old_alive_allies = sum(s["alive"] for s in state["army"])
+    old_alive_enemies = sum(s["alive"] for s in state["enemy"])
 
-    return oldAliveAllies - newAliveAllies, oldAliveEnemies - newAliveEnemies
+    return old_alive_allies - new_alive_allies, old_alive_enemies - new_alive_enemies
 
 def calc_end_bonus(new_state):
     if (new_state["type"] != "endOfGame"):

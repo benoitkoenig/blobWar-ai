@@ -15,6 +15,7 @@ def generate_blob(x, y, orientation, alive=True, status="normal", destination=No
 
 def generate_state():
     return {
+        "type": "update",
         "cards": {
             "availability": [True, True],
             "currentBlob": [None, None],
