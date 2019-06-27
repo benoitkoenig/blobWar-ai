@@ -38,10 +38,10 @@ def getFeatures(state, blob, pairFeatures):
     enemy = orderArmyByDist(state["enemy"], blob["x"], blob["y"])
     features = [
         1,
-        int(state["cards"][0]),
-        int(state["cards"][1]),
-        1 - int(state["cards"][0]),
-        1 - int(state["cards"][1]),
+        int(state["cards"]["availability"][0]),
+        int(state["cards"]["availability"][1]),
+        1 - int(state["cards"]["availability"][0]),
+        1 - int(state["cards"]["availability"][1]),
     ]
     for i in army:
         for j in enemy:

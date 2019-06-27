@@ -6,11 +6,11 @@ def determineReward(state, newState):
 
     alliesKilled = oldAliveAllies - newAliveAllies
     enemiesKilled = oldAliveEnemies - newAliveEnemies
-    card0used = (state["cards"][0] == True) & (newState["cards"][0] == False)
-    card1used = (state["cards"][1] == True) & (newState["cards"][1] == False)
+    card0used = (state["cards"]["availability"][0] == True) & (newState["cards"]["availability"][0] == False)
+    card1used = (state["cards"]["availability"][1] == True) & (newState["cards"]["availability"][1] == False)
 
     cardUnavailable = 0
-    if ((state["action"] % 3 == 1) & (state["cards"][0] == False)) | ((state["action"] % 3 == 2) & (state["cards"][1] == False)):
+    if ((state["action"] % 3 == 1) & (state["cards"]["availability"][0] == False)) | ((state["action"] % 3 == 2) & (state["cards"]["availability"][1] == False)):
         cardUnavailable = 1 # Penalty for using a spell that is not available. Hope this will prevent wrong returns
 
     return enemiesKilled * 5 - alliesKilled * 5 - 1 - 3 * (card0used + card1used) - 20 * cardUnavailable

@@ -27,7 +27,6 @@ traceDecay = 0.9
 
 class Agent:
     def __init__(self, sio, id, name):
-        sio.emit("learning_agent_created", {"id": id})
         self.sio = sio
         self.id = id
         self.name = name
@@ -35,6 +34,7 @@ class Agent:
         self.oldState = None
         self.z = [np.zeros(W_SIZE), np.zeros(W_SIZE), np.zeros(W_SIZE)]
         self.t = 0
+        sio.emit("learning_agent_created-{}".format(id))
 
     def action(self, data):
         if (data["type"] == "update"):
@@ -52,25 +52,22 @@ class Agent:
             Ws[self.name] = Ws[self.name] + alpha * delta * self.z[blobId]
 
         Ws_saved[self.name][:] = Ws[self.name][:]
-        print("End of game after", self.t, "episodes")
-        self.sio.emit("action-" + str(self.id), []) # Needs to play one last time for the game to properly end
+        print("End of game after {} episodes".format(self.t))
+        self.sio.emit("action-{}".format(self.id), []) # Needs to play one last time for the game to properly end
 
     def update(self, state):
         global Ws
 
         self.t += 1
 
-        if(self.t == 1): # Due to exploratory starts, skip the first update, where instant arbitrary kills can occur and add bias
-            self.sio.emit("action-" + str(self.id), [])
-            return
-
-        if (self.t == 2): # First update, initializing the state
+        if (self.t == 2): # First update, initializing the state. Skip t=1 due to exploratory starts, where instant arbitrary kills can occur and add bias
             self.oldState = state
             self.oldState["action"] = -1
+            self.sio.emit("action-{}".format(self.id), [])
             return
 
         if (self.t % 8 != 3):
-            self.sio.emit("action-" + str(self.id), [])
+            self.sio.emit("action-{}".format(self.id), [])
             return
 
         actions = []
@@ -94,4 +91,4 @@ class Agent:
 
         self.oldState = state
         self.oldState["action"] = bestActionId
-        self.sio.emit("action-" + str(self.id), actions)
+        self.sio.emit("action-{}".format(self.id), actions)
