@@ -45,11 +45,15 @@ def get_color_density(df):
 
 def get_highest_prob_per_kill_data(df):
     # Returns highest probs for steps classified into Proper Kill, Kamikaze, or No Kill
-    return [
+    values = [
         df[(df["kamikaze"] == False) & (df["proper_kill"] == False)]["highest_prob"].values,
         df[df["kamikaze"] == True]["highest_prob"].values,
         df[df["proper_kill"] == True]["highest_prob"].values,
     ]
+    for i in range(3):
+        if len(values[i]) == 0:
+            values[i] = [0.] # An empty array throws an error. If the highest prob appears to be null, we know for sure this is what happened
+    return values
 
 #########################################
 # Initializing dataframes and variables #
