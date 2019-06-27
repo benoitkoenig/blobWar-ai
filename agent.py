@@ -69,7 +69,7 @@ class Agent:
             self.oldState["action"] = -1
             return
 
-        if (self.t % 10 != 3):
+        if (self.t % 8 != 3):
             self.sio.emit("action-" + str(self.id), [])
             return
 
