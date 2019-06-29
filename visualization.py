@@ -69,8 +69,8 @@ if bot_name != None:
     df_per_step = df_per_step[df_per_step["name"] == bot_name]
     df_per_episode = df_per_episode[df_per_episode["name"] == bot_name]
 
-df_per_step_tail = df_per_step.tail(10000)
-df_per_step_pre_tail = df_per_step.tail(110000).head(100000)
+df_per_step_tail = df_per_step.tail(100000)
+df_per_step_pre_tail = df_per_step.tail(200000).head(100000)
 
 ############
 # Plotting #
@@ -88,7 +88,7 @@ plt.title("Nb Steps Per Game")
 plt.subplot(3, 3, 2)
 labels = ["Timeout", "Defeat", "It's a draw", "Victory !"]
 ordered_results = order_dates_by_category(df_per_episode, "result", labels)
-plt.hist(ordered_results, bins=24, stacked=True, color=["purple", "red", "blue", "green"], label=labels)
+plt.hist(ordered_results, bins=24, stacked=True, color=["yellow", "red", "blue", "green"], label=labels)
 plt.legend()
 plt.gca().xaxis.set_major_formatter(mdates.DateFormatter('%H:%M'))
 plt.gca().xaxis.set_major_locator(mdates.AutoDateLocator(maxticks=5))

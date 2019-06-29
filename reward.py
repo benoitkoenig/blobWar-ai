@@ -21,8 +21,6 @@ def calc_end_bonus(new_state):
 
 def forbidden_move(state, action_id):
     id_blob, _, _, id_card = get_action_data(action_id)
-    if id_blob == None:
-        return 0
     if (state["army"][id_blob]["alive"] == False):
         return 1
     if (id_card != None):

@@ -9,17 +9,6 @@ def get_scalar(v1, v2):
         return 0
     return np.dot(v1, v2) / length_product
 
-def get_angle(b1, b2):
-    v = [b2["x"] - b1["x"], b2["y"] - b1["y"]]
-    norm = np.linalg.norm(v)
-    if (norm == 0):
-        return 0
-    x = v[0] / norm
-    angle = np.math.acos(x)
-    if (v[1] < 0):
-        angle = -angle
-    return angle
-
 def get_distance(b1, b2):
     return math.sqrt(((b1["x"] - b2["x"]) ** 2 + (b1["y"] - b2["y"]) ** 2) / 2) # divided by 2 so the max distance is 1
 
@@ -53,27 +42,10 @@ def get_pair_blob_features(state):
     state_vector = []
     all_blobs = (state["army"] + state["enemy"])
     for i in range(len(all_blobs)):
+        b1 = all_blobs[i]
         for j in range(i):
-            b1 = all_blobs[i]
             b2 = all_blobs[j]
-            state_vector += [
-                get_distance(b1, b2),
-                get_angle(b1, b2),
-                get_angle(b2, b1),
-            ]
-    return state_vector
-
-def get_angle_between_three_blobs(state):
-    state_vector = []
-    all_blobs = (state["army"] + state["enemy"])
-    for i in range(len(all_blobs)):
-        for j in range(len(all_blobs)):
-            for k in range(j):
-                if (i != j) & (i != k):
-                    b1 = all_blobs[i]
-                    b2 = all_blobs[j]
-                    b3 = all_blobs[k]
-                    state_vector.append(get_angle(b1, b2) - get_angle(b1, b3))
+            state_vector.append(get_distance(b1, b2))
     return state_vector
 
 def get_in_range_data(state, name):
@@ -106,7 +78,6 @@ def get_state_vector(state, name):
     state_vector += get_cards_data(state)
     state_vector += get_all_blobs_features(state)
     state_vector += get_pair_blob_features(state)
-    state_vector += get_angle_between_three_blobs(state)
     state_vector += get_in_range_data(state, name)
     state_vector += get_scalar_data(state)
     return state_vector

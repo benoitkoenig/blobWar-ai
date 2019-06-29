@@ -40,13 +40,6 @@ class TestStateUtilityMethods(unittest.TestCase):
         self.assertEqual(state.get_scalar(v0, v2), 0)
         self.assertEqual(state.get_scalar(v1, v2), 2 / math.sqrt(5))
 
-    def test_get_angle(self):
-        b1 = {"x": 0, "y": 1}
-        b2 = {"x": 1, "y": 2}
-        b3 = {"x": 1, "y": 0}
-        self.assertAlmostEqual(state.get_angle(b1, b2), math.pi / 4)
-        self.assertAlmostEqual(state.get_angle(b1, b3), -math.pi / 4)
-
     def test_get_distance(self):
         b1 = {"x": 0, "y": 1}
         b2 = {"x": 1, "y": 2}
@@ -83,47 +76,16 @@ class TestStateGetStateMethods(unittest.TestCase):
         state_vector = state.get_pair_blob_features(s)
         # 1, 0
         self.assertAlmostEqual(state_vector[0], .3 / math.sqrt(2))
-        self.assertAlmostEqual(state_vector[1], math.pi)
-        self.assertAlmostEqual(state_vector[2], 0)
         # 2, 1
-        self.assertAlmostEqual(state_vector[6], .3 / math.sqrt(2))
-        self.assertAlmostEqual(state_vector[7], math.pi)
-        self.assertAlmostEqual(state_vector[8], 0)
+        self.assertAlmostEqual(state_vector[2], .3 / math.sqrt(2))
         # 3, 0
-        self.assertAlmostEqual(state_vector[9], .3 / math.sqrt(2))
-        self.assertAlmostEqual(state_vector[10], -math.pi / 2)
-        self.assertAlmostEqual(state_vector[11], math.pi / 2)
+        self.assertAlmostEqual(state_vector[3], .3 / math.sqrt(2))
         # 4, 2
-        self.assertAlmostEqual(state_vector[24], .3)
-        self.assertAlmostEqual(state_vector[25], - math.pi / 4)
-        self.assertAlmostEqual(state_vector[26], 3 * math.pi / 4)
+        self.assertAlmostEqual(state_vector[8], .3)
         # 5, 0
-        self.assertAlmostEqual(state_vector[30], math.sqrt(.45 / 2))
-        self.assertAlmostEqual(state_vector[31], -2.677945044588987)
-        self.assertAlmostEqual(state_vector[32], math.pi - 2.677945044588987)
+        self.assertAlmostEqual(state_vector[10], math.sqrt(.45 / 2))
         # 5, 4
-        self.assertAlmostEqual(state_vector[42], .3 / math.sqrt(2))
-        self.assertAlmostEqual(state_vector[43], math.pi)
-        self.assertAlmostEqual(state_vector[44], 0)
-
-    def test_get_angle_between_three_blobs(self):
-        s = generate_state()
-        s["enemy"][0] = generate_blob(.2, .4, 3)
-        s["enemy"][1] = generate_blob(.5, .4, 3)
-        s["enemy"][2] = generate_blob(.8, .4, 3)
-        state_vector = state.get_angle_between_three_blobs(s)
-        # 0, 2, 1
-        self.assertAlmostEqual(state_vector[0], 0)
-        # 1, 2, 0
-        self.assertAlmostEqual(state_vector[10], -math.pi)
-        # 2, 1, 0
-        self.assertAlmostEqual(state_vector[20], 0)
-        # 3, 1, 0
-        self.assertAlmostEqual(state_vector[30], math.pi / 4)
-        # 4, 1, 0
-        self.assertAlmostEqual(state_vector[40], math.pi / 4)
-        # 5, 1, 0
-        self.assertAlmostEqual(state_vector[50], 0.32175055439664213)
+        self.assertAlmostEqual(state_vector[14], .3 / math.sqrt(2))
 
     def test_in_range_data(self):
         s = generate_state()
@@ -148,7 +110,7 @@ class TestStateGetStateMethods(unittest.TestCase):
     def test_state_get_state_vector(self):
         s = generate_state()
         state_vector = state.get_state_vector(s, "")
-        self.assertEqual(len(state_vector), 168)
+        self.assertEqual(len(state_vector), 78)
         self.assertEqual(state_vector[0], 1)
 
 if __name__ == "__main__":

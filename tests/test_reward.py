@@ -88,26 +88,21 @@ class TestRewardMethods(unittest.TestCase):
         end_bonus = reward.calc_end_bonus({"type": "endOfGame", "value": "Draw"})
         self.assertEqual(end_bonus, 4)
 
-    def test_forbidden_move_empty_move(self):
-        s = generate_state()
-        result = reward.forbidden_move(s, 0)
-        self.assertEqual(result, 0)
-
     def test_forbidden_move_allowed_move(self):
         s = generate_state()
-        result = reward.forbidden_move(s, 1)
+        result = reward.forbidden_move(s, 0)
         self.assertEqual(result, 0)
 
     def test_forbidden_move_dead_blob(self):
         s = generate_state()
         s["army"][0] = generate_blob(.2, .1, 1, alive=False)
-        result = reward.forbidden_move(s, 1)
+        result = reward.forbidden_move(s, 0)
         self.assertEqual(result, 1)
 
     def test_forbidden_move_unavailable_card(self):
         s = generate_state()
         s["cards"]["availability"][0] = False
-        result = reward.forbidden_move(s, 2)
+        result = reward.forbidden_move(s, 1)
         self.assertEqual(result, 1)
 
     def test_determine_reward_initial_state(self):

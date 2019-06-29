@@ -2,12 +2,8 @@ import numpy as np
 
 from constants import ACTION_SIZE
 
-def get_action_data(action_id):
-    if (action_id) == 0:
-        return None, None, None, None
-
-    id = action_id - 1
-    per_blob_action_size = int((ACTION_SIZE - 1) / 3)
+def get_action_data(id):
+    per_blob_action_size = int(ACTION_SIZE / 3)
     per_pair_action_size = int(per_blob_action_size / 3)
 
     id_blob = int(id / per_blob_action_size)
@@ -25,8 +21,6 @@ def get_action_data(action_id):
 
 def get_action(state, best_action_id):
     id_blob, id_other_blob, id_action, _ = get_action_data(best_action_id)
-    if (id_blob == None):
-        return []
     blob = state["army"][id_blob]
     other_blob = state["enemy"][id_other_blob]
     base_vector = np.array([other_blob["x"] - blob["x"], other_blob["y"] - blob["y"]])
@@ -47,12 +41,4 @@ def get_action(state, best_action_id):
             {"type": "server/triggerCard", "idBlob": id_blob, "destination": destination, "idCard": 1},
         ],
     ]
-    other_vectors = [
-        -base_vector,
-        [base_vector[1], -base_vector[0]],
-        [-base_vector[1], base_vector[0]],
-    ]
-    for v in other_vectors:
-        destination = {"x": blob["x"] + v[0], "y": blob["y"] + v[1]}
-        actions.append([{"type": "server/setDestination", "idBlob": id_blob, "destination": destination}])
     return actions[id_action]
