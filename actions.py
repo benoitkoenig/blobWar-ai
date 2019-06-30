@@ -3,11 +3,11 @@ import numpy as np
 from constants import ACTION_SIZE
 
 def get_action_data(id):
-    per_blob_action_size = int(ACTION_SIZE / 3)
-    per_pair_action_size = int(per_blob_action_size / 3)
+    per_blob_action_size = ACTION_SIZE // 3
+    per_pair_action_size = per_blob_action_size // 3
 
-    id_blob = int(id / per_blob_action_size)
-    id_other_blob = int((id % per_blob_action_size) / per_pair_action_size)
+    id_blob = id // per_blob_action_size
+    id_other_blob = (id % per_blob_action_size) // per_pair_action_size
 
     id_action = id % per_pair_action_size
     if (id_action == 1):
