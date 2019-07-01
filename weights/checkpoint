@@ -1,2 +1,2 @@
-model_checkpoint_path: "critic-RBotDashDash"
-all_model_checkpoint_paths: "critic-RBotDashDash"
+model_checkpoint_path: "critic-RBotGhostBloc"
+all_model_checkpoint_paths: "critic-RBotGhostBloc"

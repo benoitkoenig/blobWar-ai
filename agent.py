@@ -3,7 +3,7 @@ import tensorflow as tf
 
 from actions import get_action
 from bots import Bots, CriticModel, ActorModel
-from constants import ACTION_SIZE, STATE_SIZE, step_size, gamma, epsilon, prob_flattener_factor, update_interval
+from constants import ACTION_SIZE, STATE_SHAPE, step_size, gamma, epsilon, prob_flattener_factor, update_interval
 from reward import determine_reward, calc_kills
 from state import get_state_vector
 from tracking import save_episode_data, save_step_data
@@ -31,8 +31,8 @@ class Agent:
 
         self.local_critic = CriticModel()
         self.local_actor = ActorModel()
-        self.local_critic(tf.convert_to_tensor(np.zeros((1, STATE_SIZE))))
-        self.local_actor(tf.convert_to_tensor(np.zeros((1, STATE_SIZE))))
+        self.local_actor(tf.convert_to_tensor(np.random.rand(3, 3, 1, 6), dtype=np.float32))
+        self.local_critic(tf.convert_to_tensor(np.random.rand(3, 3, 1, 6), dtype=np.float32))
         self.local_critic.set_weights(self.bot.critic.get_weights())
         self.local_actor.set_weights(self.bot.actor.get_weights())
 
@@ -82,11 +82,13 @@ class Agent:
         return get_value_loss, get_policy_loss
 
     def update(self, state):
-        state_vector = np.array(get_state_vector(state, self.name))
-        state_vector = tf.convert_to_tensor(np.reshape(state_vector, [1, STATE_SIZE]))
+        state_vector = get_state_vector(state, self.name)
+        state_vector = tf.convert_to_tensor(state_vector, dtype=np.float32)
         logits = self.local_actor(state_vector)
-        probs = tf.nn.softmax(logits[0]).numpy()
-        probs = [(1 - epsilon) * p + epsilon / ACTION_SIZE for p in probs]
+        s = tf.reduce_sum(tf.math.exp(logits))
+        logits_with_epsilon = tf.map_fn(lambda l: tf.math.log((1 - epsilon) * tf.math.exp(l) + s * epsilon / ACTION_SIZE), logits)
+        probs = tf.nn.softmax(logits_with_epsilon[0]).numpy()
+        # probs = [(1 - epsilon) * p + epsilon / ACTION_SIZE for p in probs]
         best_action_id = np.random.choice(ACTION_SIZE, p=probs)
 
         reward = determine_reward(self.old_state, state, self.old_action_id)
@@ -110,7 +112,7 @@ class Agent:
             self.grads_critic += grads_critic
             self.grads_actor += grads_actor
 
-            save_step_data(self.id, self.name, self.step - 1, self.old_probs, self.old_action_id, reward, (allies_killed == 0) & (enemies_killed != 0), (allies_killed != 0) & (enemies_killed != 0))
+            save_step_data(self.id, self.name, self.step - 1, self.old_probs.tolist(), self.old_action_id, reward, (allies_killed == 0) & (enemies_killed != 0), (allies_killed != 0) & (enemies_killed != 0))
             if ((state["type"] == "endOfGame") | (self.step % update_interval == (update_interval - 1))):
                 grads_critic = self.bot.optimizer_critic.apply_gradients(self.grads_critic)
                 grads_actor = self.bot.optimizer_actor.apply_gradients(self.grads_actor)

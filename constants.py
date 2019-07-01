@@ -1,15 +1,15 @@
 import math
 
-STATE_SIZE = 78
+STATE_SHAPE = [18, 18, 18]
 ACTION_SIZE = 27
 
 step_size = 8
 gamma = .9
-epsilon = .02
-prob_flattener_factor = .005
+epsilon = .1
+prob_flattener_factor = .01
 update_interval = 10
-learning_rate_actor = 2e-5
-learning_rate_critic = 2e-5
+learning_rate_actor = 1e-4
+learning_rate_critic = 1e-4
 
 names = ["RBotGhostBloc", "RBotDashDash"]
 
