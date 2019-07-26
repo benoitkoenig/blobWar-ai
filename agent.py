@@ -65,13 +65,13 @@ class Agent:
         def get_policy_loss():
             logits = self.local_actor(self.old_state_vector)
             s = tf.reduce_sum(tf.math.exp(logits))
-            logits_with_epsilon = tf.map_fn(lambda l: tf.math.log((1 - epsilon) * tf.math.exp(l) + s * epsilon / ACTION_SIZE), logits)
+            logits_with_epsilon = tf.math.log((1 - epsilon) * tf.math.exp(logits) + s * epsilon / ACTION_SIZE)
 
             policy_loss = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=[self.old_action_id], logits=logits_with_epsilon)[0] # The loss assuming we took the right action
             policy_loss = tf.multiply(tf.stop_gradient(self.advantage), policy_loss) # Multiply by advantage tells how much that action was right
 
             probs = tf.nn.softmax(logits[0])
-            log_p = tf.map_fn(lambda p: tf.math.abs(tf.math.log(p * ACTION_SIZE)), probs)
+            log_p = tf.math.abs(tf.math.log(probs * ACTION_SIZE))
             low_prob_advantage = tf.reduce_sum(log_p)
             # The goal of low_prob_advantage is to give a very tiny advantage to actions with low probability,
             # so that actions with the same consequences tend to the same probability
