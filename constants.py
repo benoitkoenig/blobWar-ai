@@ -7,7 +7,6 @@ step_size = 8
 gamma = .9
 epsilon = .05
 prob_flattener_factor = .005
-update_interval = 10
 learning_rate_actor = 2e-5
 learning_rate_critic = 2e-5
 

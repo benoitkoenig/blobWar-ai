@@ -43,8 +43,8 @@ class CriticModel(Model):
 
 class Bot():
     def __init__(self, name):
-        self.optimizer_actor = tf.train.AdamOptimizer(learning_rate_actor)
-        self.optimizer_critic = tf.train.AdamOptimizer(learning_rate_critic)
+        self.optimizer_actor = tf.train.AdamOptimizer(learning_rate_actor, use_locking=True)
+        self.optimizer_critic = tf.train.AdamOptimizer(learning_rate_critic, use_locking=True)
         self.actor = ActorModel()
         self.critic = CriticModel()
 
