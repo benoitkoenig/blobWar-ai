@@ -82,11 +82,11 @@ class Agent:
         return get_value_loss, get_policy_loss
 
     def update(self, state):
-        state_vector = np.array(get_state_vector(state, self.name))
-        state_vector = tf.convert_to_tensor(np.reshape(state_vector, [1, STATE_SIZE]))
+        state_vector = get_state_vector(state, self.name)
+        state_vector = tf.convert_to_tensor([state_vector])
         logits = self.local_actor(state_vector)
         probs = tf.nn.softmax(logits[0]).numpy()
-        probs = [(1 - epsilon) * p + epsilon / ACTION_SIZE for p in probs]
+        probs = (1 - epsilon) * probs + epsilon / ACTION_SIZE
         best_action_id = np.random.choice(ACTION_SIZE, p=probs)
 
         reward = determine_reward(self.old_state, state, self.old_action_id)
@@ -110,7 +110,7 @@ class Agent:
             self.grads_critic += grads_critic
             self.grads_actor += grads_actor
 
-            save_step_data(self.id, self.name, self.step - 1, self.old_probs, self.old_action_id, reward, (allies_killed == 0) & (enemies_killed != 0), (allies_killed != 0) & (enemies_killed != 0))
+            save_step_data(self.id, self.name, self.step - 1, self.old_probs.tolist(), self.old_action_id, reward, (allies_killed == 0) & (enemies_killed != 0), (allies_killed != 0) & (enemies_killed != 0))
             if ((state["type"] == "endOfGame") | (self.step % update_interval == (update_interval - 1))):
                 grads_critic = self.bot.optimizer_critic.apply_gradients(self.grads_critic)
                 grads_actor = self.bot.optimizer_actor.apply_gradients(self.grads_actor)
